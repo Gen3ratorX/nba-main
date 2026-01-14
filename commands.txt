@@ -1,0 +1,220 @@
+NBA Prediction System - Command Reference Guide
+Core Commands
+1. Full Pipeline (Complete Analysis)
+bash# Standard full run - fetch data, train model, make predictions
+python main.py
+
+# Full run without downloading new data (use cached)
+python main.py --no-update
+
+# Full run with hyperparameter tuning (slower, better accuracy)
+python main.py --tune
+
+# Full run with backtesting validation
+python main.py --backtest
+2. Quick Prediction Mode
+bash# Fast predictions using cached data (no retraining)
+python main.py predict
+
+# Quick predictions with custom max bets
+python main.py predict --max-bets 3
+3. Data Collection
+bash# Fetch all data (historical + current + upcoming)
+python fetch_data.py
+
+# Fetch only upcoming games
+python fetch_upcoming_games.py
+4. Performance Tracking
+bash# Update predictions with actual game results
+python update_results.py
+
+# Check last 7 days of results
+python update_results.py --days 7
+
+# Update without showing performance report
+python update_results.py --no-report
+
+# Update and export to CSV
+python update_results.py --export
+
+# View performance tracker demo
+python performance_tracker.py
+5. Testing & Demos
+bash# Test betting strategy calculations
+python betting_strategy.py
+
+# Test free NBA APIs
+python free_nba_apis.py
+
+# Test data processor
+python data_processor.py
+
+# Test model utilities
+python model_utils.py
+
+Advanced Usage with Arguments
+Bankroll Management
+bash# Set custom starting bankroll ($500)
+python main.py --bankroll 500
+
+# Set custom bankroll ($5000)
+python main.py --bankroll 5000
+Data Collection Parameters
+bash# Fetch last 30 days of current season
+python main.py --days-back 30
+
+# Fetch next 14 days of upcoming games
+python main.py --days-ahead 14
+
+# Combine both
+python main.py --days-back 30 --days-ahead 14
+Betting Strategy Customization
+bash# Only show top 3 bets per day
+python main.py --max-bets 3
+
+# Set 7% minimum edge threshold
+python main.py --min-edge 0.07
+
+# Combine strategies
+python main.py --max-bets 5 --min-edge 0.05 --bankroll 1000
+
+Configuration Management
+View Configuration
+bash# Print configuration information
+python config.py
+
+# View NBA teams mapping
+python -c "from config import NBA_TEAMS; print(NBA_TEAMS)"
+Modify Configuration
+Edit config.py or create .env file:
+bash# .env file example
+BALLDONTLIE_API_KEY=your_key_here
+LOG_LEVEL=DEBUG
+MIN_GAMES_FOR_TRAINING=100
+
+Real-World Workflow Examples
+Daily Betting Workflow
+bash# Morning: Get today's predictions
+python main.py predict --max-bets 3
+
+# Evening: Update yesterday's results
+python update_results.py --days 1
+
+# Weekly: Full performance review
+python update_results.py --days 7
+Weekly Full Refresh
+bash# Sunday: Full system refresh
+python main.py --backtest --tune --days-back 60
+Conservative Betting Setup
+bash# High edge threshold, limited bets, small bankroll
+python main.py --min-edge 0.08 --max-bets 2 --bankroll 500
+Aggressive Betting Setup
+bash# Lower edge threshold, more bets, larger bankroll
+python main.py --min-edge 0.03 --max-bets 5 --bankroll 2000
+
+Troubleshooting Commands
+Check System Status
+bash# Test all APIs
+python free_nba_apis.py
+
+# Verify data files exist
+ls -la data/historical/
+ls -la data/current/
+ls -la data/upcoming/
+
+# Check for errors in logs
+tail -f logs/nba_predictor_*.log
+Reset & Clean
+bash# Remove old data files
+rm -rf data/current/*.csv
+rm -rf data/upcoming/*.csv
+
+# Clear performance history (CAREFUL!)
+rm data/performance_history.json
+
+# Remove old models
+rm -rf models/*.pkl
+
+Python Interactive Usage
+Import and Use Components
+python# Launch Python interactive shell
+python
+
+# Inside Python:
+from betting_strategy import KellyBetting
+kelly = KellyBetting(bankroll=1000)
+bet = kelly.calculate_bet_size(win_probability=0.65, american_odds=-110)
+print(bet)
+
+# Track performance
+from performance_tracker import PerformanceTracker
+tracker = PerformanceTracker()
+print(tracker.get_performance_report())
+
+# Fetch data
+from fetch_data import FreeNBADataCollector
+collector = FreeNBADataCollector()
+games = collector.get_todays_games_comprehensive()
+print(games)
+Quick Calculations
+python# Calculate a single bet
+from betting_strategy import calculate_bet
+bet = calculate_bet(
+    win_prob=0.60,
+    odds=-110,
+    bankroll=1000,
+    min_edge=0.05
+)
+print(bet)
+
+Complete Command Reference Table
+CommandPurposeSpeedData Updatepython main.pyFull pipeline5-10 minYespython main.py predictQuick predictions1-2 minNopython main.py --backtestFull validation10-20 minYespython main.py --tuneBest accuracy15-30 minYespython fetch_data.pyData only2-5 minYespython update_results.pyUpdate results1 minYespython betting_strategy.pyTest betting10 secNopython performance_tracker.pyView stats5 secNo
+
+Recommended Daily Usage
+Option 1: Quick Daily Picks (2 minutes)
+bash# Get today's predictions (uses cached data)
+python main.py predict --max-bets 3
+
+# Later: Update yesterday's results
+python update_results.py --days 1
+Option 2: Fresh Analysis (10 minutes)
+bash# Full refresh with new data
+python main.py --days-back 30 --max-bets 3
+
+# Update results
+python update_results.py --days 3
+Option 3: Weekly Deep Dive (30 minutes)
+bash# Sunday: Full retrain with tuning
+python main.py --tune --backtest --days-back 60
+
+# Check weekly performance
+python update_results.py --days 7 --export
+
+Important Notes
+⚠️ Before Real Money:
+bash# Run paper trading for 100+ games first
+python main.py predict --max-bets 3  # Daily for 2-3 months
+python update_results.py --days 1    # Track results daily
+✅ Best Practices:
+
+Run update_results.py daily
+Monitor performance tracker alerts
+Start with --min-edge 0.08 (conservative)
+Use --max-bets 2-3 initially
+Review calibration weekly
+
+🚫 Don't:
+
+Skip the --no-update flag without checking data freshness
+Ignore performance tracker warnings
+Bet more than 3% per game
+Chase losses by lowering min-edge
+
+
+Help & Documentation
+bash# Get help for any command
+python main.py --help
+python update_results.py --help
+
+# View detailed examples
+python main.py --help | grep -A 20 "Examples:"
