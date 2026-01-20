@@ -15,23 +15,29 @@ A **production-ready machine learning system** for predicting NBA game outcomes 
 | Feature | Description | Impact |
 |---------|-------------|--------|
 | 🆓 **Free Data Stack** | Uses NBA Stats API, ESPN API, and BallDontLie (No paid subscriptions) | $0/month cost |
+| 🧠 **Dual ML Models** | Moneyline (4-model ensemble) + Totals (2-model regression) | Comprehensive predictions |
 | 🧠 **4-Model Ensemble** | RandomForest + GradientBoosting + XGBoost + LogisticRegression | +3-5% accuracy |
-| 📊 **26 Advanced Features** | ELO, Net Rating, Pace, Back-to-Back, H2H, Home Court Advantage | +2-4% accuracy |
+| 📊 **28 Advanced Features** | ELO, Net Rating, Pace, Back-to-Back, H2H, Home Court Advantage | +2-4% accuracy |
 | 🎯 **Probability Calibration** | Isotonic calibration fixes overconfident predictions | Reliable probabilities |
 | 💰 **Kelly Criterion** | Professional bankroll management with fractional Kelly | Optimal bet sizing |
 | 🔄 **Time-Series CV** | Proper validation prevents lookahead bias | True accuracy metrics |
 | 🎲 **Tier-Based Betting** | Smart bet selection by value score | Focus on best opportunities |
 | 🛡️ **Bankroll Protection** | Never exceeds available funds + daily bet limits | Risk management |
+| 🔗 **Unified System** | Single command for moneyline, totals, and confluence analysis | Simplified workflow |
 
 ### 🚀 **Core Capabilities**
 
-- **Ensemble Learning**: Combines 4 different ML algorithms with soft voting
+- **Unified Prediction System**: Single `predictions.py` script handles all prediction types
+- **Dual Model Architecture**: Separate models for moneyline (win/loss) and totals (over/under)
+- **Ensemble Learning**: Combines 4 different ML algorithms with soft voting for moneyline
+- **Regression Models**: RandomForest + GradientBoosting for accurate totals predictions
 - **Dynamic Retraining**: Adapts to recent team performance and injuries
-- **26 Predictive Features**: Including advanced analytics used by NBA front offices
+- **28 Predictive Features**: Including advanced analytics used by NBA front offices
 - **Time-Series Validation**: Prevents data leakage with proper temporal splits
 - **Feature Importance Tracking**: See which factors drive predictions
 - **Calibration Testing**: Verify prediction probabilities are accurate
 - **Professional Betting Strategy**: Tier-based selection with value scoring
+- **Confluence Analysis**: Identifies games where both moneyline and totals agree
 
 ---
 
@@ -165,24 +171,37 @@ pip install --user pandas numpy scikit-learn xgboost requests python-dotenv jobl
 # Activate virtual environment
 source venv/bin/activate
 
-# Run full pipeline (downloads data, trains model, makes predictions)
-python main.py
+# Step 1: Train models (one-time setup, ~5 minutes)
+python main.py --days-back 60        # Train moneyline model
+python train_totals_model.py         # Train totals model
+
+# Step 2: Get predictions (daily use, ~30 seconds)
+python predictions.py
 
 # Expected output:
-# - Downloads 2+ years of historical data (~3 minutes)
-# - Trains 4-model ensemble (~2 minutes)
-# - Generates predictions with betting advice
+# - Moneyline predictions with betting recommendations
+# - Totals (over/under) predictions
+# - Confluence plays (where both agree)
+# - Ranked by value and edge
 ```
 
 ### Daily Usage (Recommended)
 
 ```bash
-# Quick predictions (uses cached data)
-python main.py predict --max-bets 3 --min-edge 0.15
+# Complete analysis (Moneyline + Totals + Confluence) - RECOMMENDED
+python predictions.py
+
+# For tomorrow's games
+python predictions.py --tomorrow
+
+# Conservative strategy
+python predictions.py --max-bets 3 --min-edge 0.08
 
 # This gives you:
 # - Top 3 betting opportunities
-# - 15%+ minimum edge required
+# - 8%+ minimum edge required
+# - Moneyline + Totals predictions
+# - Confluence analysis
 # - ~30 seconds execution time
 ```
 
@@ -190,76 +209,106 @@ python main.py predict --max-bets 3 --min-edge 0.15
 
 ## 📖 Command Reference
 
-### Basic Commands
+### 🎯 Core Prediction Commands (Daily Use)
 
 ```bash
-# Full pipeline (data + train + predict)
-python main.py
+# Complete analysis (Moneyline + Totals + Confluence) - RECOMMENDED
+python predictions.py                 # Today's games
+python predictions.py --tomorrow      # Tomorrow's games
+python predictions.py --date 2026-01-25  # Specific date
 
-# Quick daily predictions
-python main.py predict
+# Individual prediction types
+python predictions.py --moneyline     # Moneyline only
+python predictions.py --totals        # Totals only
 
-# Skip data update (faster)
-python main.py --no-update
-
-# Enable backtesting (validation)
-python main.py --backtest
-
-# Enable hyperparameter tuning (slow but accurate)
-python main.py --tune
+# Options
+python predictions.py --show-all      # Show all games (not just top picks)
+python predictions.py --min-edge 0.08 # 8% minimum edge (conservative)
+python predictions.py --max-bets 3    # Limit to 3 bets per day
+python predictions.py --bankroll 5000 # Custom bankroll
+python predictions.py --typical-total 225.0  # Custom O/U line
 ```
 
-### Betting Strategy Commands
+### 🏋️ Training Commands
+
+```bash
+# Train moneyline model (weekly)
+python main.py --days-back 60
+
+# Train totals model (weekly)
+python train_totals_model.py
+
+# Full pipeline (fetch data + train + predict)
+python main.py
+
+# Advanced training options
+python main.py --tune                 # Hyperparameter tuning (slow)
+python main.py --backtest             # Run backtesting/validation
+python main.py --no-update            # Skip data download
+```
+
+### 📊 Performance Tracking
+
+```bash
+# Update results (daily)
+python update_results.py --days 1     # Update yesterday's results
+
+# Weekly review
+python update_results.py --days 7     # Update last week
+python update_results.py --export     # Export to CSV
+```
+
+### 💰 Betting Strategy Examples
 
 ```bash
 # Conservative (Recommended for beginners)
-python main.py predict --max-bets 3 --min-edge 0.15
+python predictions.py --max-bets 3 --min-edge 0.08
 
 # Moderate (Balanced approach)
-python main.py predict --max-bets 5 --min-edge 0.10
+python predictions.py --max-bets 5 --min-edge 0.05
 
 # Aggressive (Higher risk)
-python main.py predict --max-bets 7 --min-edge 0.07
+python predictions.py --max-bets 7 --min-edge 0.03
 
 # Ultra-conservative (Only best opportunities)
-python main.py predict --max-bets 2 --min-edge 0.20
+python predictions.py --max-bets 2 --min-edge 0.12
 ```
 
-### Bankroll Management
+### 📅 Date & Data Options
 
 ```bash
-# Custom bankroll
-python main.py --bankroll 500          # $500 starting bankroll
-python main.py --bankroll 2000         # $2000 starting bankroll
+# For training (more historical data)
+python main.py --days-back 90         # Last 90 days
+python main.py --days-back 120        # Full season
 
-# Combined with strategy
-python main.py predict --bankroll 1000 --max-bets 3 --min-edge 0.15
+# For predictions (future games)
+python predictions.py --date 2026-01-25  # Specific date
+python predictions.py --tomorrow      # Tomorrow
 ```
 
-### Date Range Options
+### 📋 All Parameters
 
-```bash
-# Fetch more historical data
-python main.py --days-back 90          # Last 90 days
-python main.py --days-back 120         # Last 120 days (full season)
-
-# Fetch more upcoming games
-python main.py --days-ahead 14         # Next 2 weeks
-python main.py --days-ahead 3          # Next 3 days
-
-# Combined
-python main.py --days-back 60 --days-ahead 7
-```
-
-### All Parameters
-
+#### predictions.py
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
+| `--moneyline` | False | Moneyline predictions only | `--moneyline` |
+| `--totals` | False | Totals predictions only | `--totals` |
+| `--tomorrow` | False | Tomorrow's games | `--tomorrow` |
+| `--date` | Today | Specific date (YYYY-MM-DD) | `--date 2026-01-25` |
+| `--show-all` | False | Show all games | `--show-all` |
+| `--max-bets` | 5 | Max bets per day | `--max-bets 3` |
+| `--min-edge` | 0.05 | Min edge threshold | `--min-edge 0.08` |
+| `--bankroll` | 1000 | Starting bankroll ($) | `--bankroll 500` |
+| `--typical-total` | 220 | Typical O/U line | `--typical-total 225` |
+
+#### main.py (Training)
+| Parameter | Default | Description | Example |
+|-----------|---------|-------------|---------|
+| `--days-back` | 60 | Historical days to fetch | `--days-back 90` |
+| `--days-ahead` | 7 | Upcoming days to predict | `--days-ahead 14` |
 | `--bankroll` | 1000 | Starting bankroll ($) | `--bankroll 500` |
 | `--max-bets` | 5 | Max bets per day | `--max-bets 3` |
-| `--min-edge` | 0.05 | Min edge threshold (%) | `--min-edge 0.15` |
-| `--days-back` | 60 | Historical days to fetch | `--days-back 90` |
-| `--days-ahead` | 7 | Upcoming days to predict | `--days-ahead 3` |
+| `--min-edge` | 0.05 | Min edge threshold | `--min-edge 0.15` |
 | `--no-update` | False | Skip data download | `--no-update` |
 | `--backtest` | False | Run validation | `--backtest` |
 | `--tune` | False | Optimize hyperparameters | `--tune` |
@@ -271,28 +320,42 @@ python main.py --days-back 60 --days-ahead 7
 ```
 nba-main/
 │
-├── main.py                    # Main application & CLI
-├── config.py                  # Configuration & feature definitions
+├── predictions.py            # 🎯 UNIFIED PREDICTION SYSTEM (main entry point)
+├── main.py                   # Training pipeline for moneyline model
+├── train_totals_model.py     # Training pipeline for totals model
+├── model_loader.py           # Centralized model loading
+├── update_results.py         # Track and update prediction results
+├── config.py                 # Configuration & feature definitions
 ├── nbautils.py               # Utility functions (ELO, ratings, etc.)
 ├── fetch_data.py             # Data collection from APIs
 ├── data_processor.py         # Feature engineering pipeline
 ├── model_utils.py            # ML models & training logic
 ├── betting_strategy.py       # Kelly Criterion implementation
+├── performance_tracker.py    # Performance tracking & analytics
+├── totals_predictor.py       # Totals prediction logic
 │
+├── commands.txt              # Complete command reference
+├── SYSTEM_FLOW.md            # System architecture & flow documentation
 ├── .env                      # API keys (optional)
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # This file
 │
 ├── data/                     # Data storage
 │   ├── historical/          # Past seasons (CSV files)
-│   ├── current/             # Current season games
+│   ├── current/             # Current season games (CSV files)
 │   ├── upcoming/            # Future games to predict
-│   └── processed/           # Feature-engineered data
+│   │   └── upcoming_games.csv
+│   ├── predictions/         # Saved predictions
+│   └── performance_history.json  # Prediction tracking
 │
 ├── models/                   # Trained models
-│   ├── nba_model_*.pkl      # Ensemble model
-│   ├── scaler_*.pkl         # Feature scaler
-│   ├── features_*.pkl       # Feature list
+│   ├── nba_model_*.pkl      # Moneyline ensemble model
+│   ├── scaler_*.pkl         # Moneyline feature scaler
+│   ├── features_*.pkl       # Moneyline feature list
+│   ├── totals_rf_*.pkl      # Totals RandomForest model
+│   ├── totals_gb_*.pkl      # Totals GradientBoosting model
+│   ├── totals_scaler_*.pkl  # Totals feature scaler
+│   ├── totals_features_*.pkl # Totals feature list
 │   └── metrics_*.json       # Training metrics
 │
 └── logs/                     # System logs
@@ -362,10 +425,11 @@ nba-main/
 
 ### 3. Machine Learning Pipeline
 
+#### Moneyline Model (Classification)
 ```
 ┌──────────────────────┐
 │  Feature Engineering │
-│  (26 features)       │
+│  (28 features)       │
 └──────────┬───────────┘
            │
            v
@@ -393,17 +457,60 @@ nba-main/
            v
 ┌──────────────────────┐
 │  Calibrated Model    │
-│  (Ready for betting) │
+│  (Win probabilities) │
+└──────────────────────┘
+```
+
+#### Totals Model (Regression)
+```
+┌──────────────────────┐
+│  Feature Engineering │
+│  (totals-relevant)   │
+└──────────┬───────────┘
+           │
+           v
+┌──────────────────────┐
+│  Regression Training │
+│  - RandomForestReg   │
+│  - GradientBoosting  │
+│  (averaged)          │
+└──────────┬───────────┘
+           │
+           v
+┌──────────────────────┐
+│  Predicted Total     │
+│  Points              │
 └──────────────────────┘
 ```
 
 **Key Innovations:**
-- **Ensemble Voting**: 4 models vote on each prediction (weighted by performance)
+- **Dual Model Architecture**: Separate models for moneyline (classification) and totals (regression)
+- **Ensemble Voting**: 4 models vote on each moneyline prediction (weighted by performance)
+- **Regression Ensemble**: 2 models average totals predictions for accuracy
 - **Isotonic Calibration**: Fixes overconfident probabilities (critical for betting)
 - **Time-Series Splits**: Prevents future data leakage during training
 - **Class Balancing**: Handles imbalanced home/away win distribution
 
-### 4. Professional Betting Strategy
+### 4. Unified Prediction System
+
+The system provides three types of predictions through a single unified interface:
+
+#### Moneyline Predictions
+- **Target**: Predict which team will win the game
+- **Model**: 4-model ensemble (RandomForest + GradientBoosting + XGBoost + LogisticRegression)
+- **Output**: Win probabilities, confidence levels, bet recommendations
+
+#### Totals Predictions (Over/Under)
+- **Target**: Predict combined total points scored
+- **Model**: Regression ensemble (RandomForestRegressor + GradientBoostingRegressor)
+- **Output**: Expected total points, over/under recommendations
+
+#### Confluence Analysis
+- **Identifies**: Games where both moneyline AND totals have value
+- **Strategy**: Highest-confidence plays when multiple models agree
+- **Output**: Ranked confluence plays for maximum edge
+
+### 5. Professional Betting Strategy
 
 #### Tier-Based Classification
 
@@ -561,14 +668,19 @@ Remaining Bankroll: $850.00
 
 **Profile**: Casual bettor, $500 bankroll, wants steady profits
 
-**Command**:
+**Commands**:
 ```bash
-python main.py predict --bankroll 500 --max-bets 2 --min-edge 0.20
+# Morning: Get picks (confluence plays only)
+python predictions.py --bankroll 500 --max-bets 2 --min-edge 0.08
+
+# Evening: Track results
+python update_results.py --days 1
 ```
 
 **Strategy**:
 - Only bets on top 2 games per day
-- Requires 20%+ edge (very selective)
+- Requires 8%+ edge (very selective)
+- Focus on confluence plays (ML + Totals agree)
 - Expected ROI: 8-12% monthly
 - Risk level: Low
 
@@ -576,19 +688,27 @@ python main.py predict --bankroll 500 --max-bets 2 --min-edge 0.20
 
 **Profile**: Experienced bettor, $2000 bankroll, weekend focus
 
-**Command**:
+**Commands**:
 ```bash
-# Monday analysis
-python main.py --backtest --bankroll 2000 --days-ahead 7
+# Monday: Retrain models
+python main.py --days-back 60
+python train_totals_model.py
 
-# Daily check
-python main.py predict --max-bets 5 --min-edge 0.12
+# Daily: Get predictions
+python predictions.py --max-bets 5 --min-edge 0.05
+
+# Daily: Track results
+python update_results.py --days 1
+
+# Sunday: Weekly review
+python update_results.py --days 7 --export
 ```
 
 **Strategy**:
-- Full model validation on Mondays
+- Weekly model retraining on Mondays
 - Up to 5 bets per day
-- 12%+ minimum edge
+- 5%+ minimum edge
+- Complete analysis (ML + Totals)
 - Expected ROI: 5-10% monthly
 - Risk level: Moderate
 
@@ -596,20 +716,26 @@ python main.py predict --max-bets 5 --min-edge 0.12
 
 **Profile**: Full-time bettor, $10,000 bankroll, data-driven
 
-**Command**:
+**Commands**:
 ```bash
-# Weekly deep dive
-python main.py --tune --backtest --days-back 120 --bankroll 10000
+# Sunday: Deep dive & retraining
+python main.py --tune --backtest --days-back 120
+python train_totals_model.py
+python update_results.py --days 7 --export
 
-# Daily predictions
-python main.py predict --max-bets 7 --min-edge 0.10
+# Daily: Full predictions
+python predictions.py --bankroll 10000 --max-bets 7 --min-edge 0.03
+
+# Daily: Track & analyze
+python update_results.py --days 1
 ```
 
 **Strategy**:
 - Weekly hyperparameter tuning
 - Up to 7 bets per day
-- 10%+ minimum edge
+- 3%+ minimum edge (more opportunities)
 - Tracks calibration and ROI
+- Complete confluence analysis
 - Expected ROI: 3-8% monthly
 - Risk level: Calculated
 
@@ -757,14 +883,14 @@ python main.py --backtest --no-update
 
 **Solution**:
 ```bash
-# Use predict mode (faster)
-python main.py predict
+# Use predictions.py (fast, uses cached models)
+python predictions.py
 
-# Reduce days_back
-python main.py --days-back 30
+# Only retrain models weekly, not daily
+# (Models don't need daily retraining)
 
-# Skip validation
-python main.py --no-backtest
+# Skip data update when training
+python main.py --no-update
 ```
 
 ### Debug Mode
@@ -785,13 +911,16 @@ tail -f logs/nba_predictor_$(date +%Y-%m-%d).log
 ### Run Backtesting
 
 ```bash
-# 10-fold time-series cross-validation
+# Moneyline model backtesting
 python main.py --backtest --no-update
 
 # Expected output:
 # - Mean Accuracy: 63-67%
 # - ROC-AUC: 0.88-0.94
 # - Calibration test results
+
+# Note: Totals model validation happens during training
+python train_totals_model.py
 ```
 
 ### Validate Calibration
@@ -927,7 +1056,20 @@ A: The framework is designed for NBA but could be adapted for NFL, MLB, NHL with
 
 ---
 
+## 📚 Additional Documentation
+
+- **[SYSTEM_FLOW.md](SYSTEM_FLOW.md)**: Complete system architecture and data flow documentation
+- **[commands.txt](commands.txt)**: Comprehensive command reference with examples
+
 ## 🗓️ Changelog
+
+### v3.0.0 (2026-01-21) - Unified System
+- ✅ **Unified Prediction System**: Single `predictions.py` script for all prediction types
+- ✅ **Totals Predictions**: ML-based over/under predictions with regression models
+- ✅ **Confluence Analysis**: Identifies games where moneyline and totals both have value
+- ✅ **Centralized Model Loading**: `model_loader.py` for consistent model management
+- ✅ **Simplified Workflow**: Streamlined commands for daily use
+- ✅ **Better Documentation**: Complete system flow documentation
 
 ### v2.0.0 (2026-01-12)
 - ✅ Added XGBoost to ensemble (4th model)
@@ -935,5 +1077,3 @@ A: The framework is designed for NBA but could be adapted for NFL, MLB, NHL with
 - ✅ Added 3 new features (back-to-back, H2H, dynamic HCA)
 - ✅ Professional tier-based betting system
 - ✅ Bankroll protection and daily bet limits
-
--python performance_tracker.py --update

@@ -91,7 +91,7 @@ class NBADataProcessor:
                 'pace_home': home_adv['pace'],
                 'pace_away': away_adv['pace'],
                 'win_streak_home': home_adv['win_streak'],
-                'win_streak_away': home_adv['win_streak'],
+                'win_streak_away': away_adv['win_streak'],
                 
                 # NEW FEATURES
                 'back_to_back_home': is_back_to_back(past_games, home, date),

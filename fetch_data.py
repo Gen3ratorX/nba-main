@@ -177,6 +177,7 @@ class FreeNBADataCollector:
                     competition = event['competitions'][0]
                     
                     # Find home and away teams
+                    # ESPN API labels are CORRECT - no swap needed
                     home = next(t for t in competition['competitors'] if t['homeAway'] == 'home')
                     away = next(t for t in competition['competitors'] if t['homeAway'] == 'away')
                     

@@ -1,350 +1,83 @@
-🏀 NBA Prediction System - COMPLETE Command Reference
-📋 Table of Contents
+🏀 NBA Prediction System - Command Reference
 
-Core Commands
-Daily Workflow Commands
-Training & Setup
-Performance Tracking
-Advanced Options
-Quick Reference
+================================================================================
+CORE COMMANDS
+================================================================================
 
+# Complete analysis (Moneyline + Totals + Confluence) - RECOMMENDED
+python predictions.py
+python predictions.py --tomorrow
+python predictions.py --date 2026-01-25
 
-🎯 Core Commands
-1. Ultimate System (Recommended - All-in-One)
-bash# Today's complete analysis (Moneyline + Totals + Confluence)
-python ultimate.py
+# Individual prediction types
+python predictions.py --moneyline       # Moneyline only
+python predictions.py --totals          # Totals only
 
-# Tomorrow's complete analysis
-python ultimate.py --tomorrow
+# Options
+python predictions.py --show-all        # Show all games
+python predictions.py --min-edge 0.08   # Conservative (8% min edge)
+python predictions.py --max-bets 3      # Limit to 3 bets
+python predictions.py --bankroll 5000   # Custom bankroll
+python predictions.py --typical-total 225.0  # Custom O/U line
 
-# Show all games (not just value plays)
-python ultimate.py --show-all
+================================================================================
+TRAINING COMMANDS
+================================================================================
 
-# Conservative settings
-python ultimate.py --min-edge 0.08 --max-bets 3
-
-
-# Custom settings
-python daily.py --max-bets 5 --min-edge 0.05
-3. Individual Prediction Types
-bash# Moneyline only - today
-python today.py
-
-# Moneyline only - tomorrow
-python tomorrow.py
-
-# Totals only - today
-python totals_predictor.py
-
-# Totals only - tomorrow
-python totals_predictor.py --tomorrow
-
-📅 Daily Workflow Commands
-Morning Routine (Pick One):
-Option A: Ultimate System (Best)
-bash# Complete analysis with everything
-python ultimate.py
-
-# If no games today, check tomorrow
-python ultimate.py --tomorrow
-Option B: Individual Components
-bash# Get moneyline picks
-python today.py
-
-# Get totals predictions
-python totals_predictor.py
-Evening Routine:
-bash# Update yesterday's results
-python update_results.py --days 1
-
-# Weekly performance review
-python update_results.py --days 7
-
-# Export to CSV for analysis
-python update_results.py --days 7 --export
-
-🤖 Training & Setup
-Initial Setup (Run Once)
-bash# 1. Train moneyline (win/loss) model
-python main.py --days-back 30
-
-# 2. Train totals (over/under) model
-python train_totals_model.py
-Weekly Model Refresh (Recommended)
-bash# Sunday: Retrain both models
-python main.py --days-back 60
-python train_totals_model.py
-
-# With full validation
-python main.py --days-back 60 --backtest
-Full Pipeline (All Features)
-bash# Standard full run - fetch data, train model, make predictions
-python main.py
-
-# Skip data download (use cached)
-python main.py --no-update
-
-# With hyperparameter tuning (slower, better accuracy)
-python main.py --tune
-
-# With backtesting validation
-python main.py --backtest
-
-# Quick predictions only (no training)
-python main.py predict --max-bets 3
-
-📊 Performance Tracking
-Update Results
-bash# Update with last 1 day of results
-python update_results.py --days 1
-
-# Check last 7 days
-python update_results.py --days 7
-
-# Update without showing report
-python update_results.py --no-report
-
-# Export to CSV
-python update_results.py --export
-
-# View performance tracker directly
-python performance_tracker.py
-
-🔧 Advanced Options
-Bankroll Management
-bash# Custom bankroll amount
-python ultimate.py --bankroll 500
-python ultimate.py --bankroll 5000
-
-# Works with all commands
-python today.py --bankroll 1000
-python daily.py --bankroll 2000
-Betting Strategy Customization
-bash# Conservative: Higher edge threshold
-python ultimate.py --min-edge 0.08 --max-bets 2
-
-# Moderate: Default settings
-python ultimate.py --min-edge 0.05 --max-bets 5
-
-# Aggressive: Lower edge threshold
-python ultimate.py --min-edge 0.03 --max-bets 7
-
-# Custom typical O/U line
-python ultimate.py --typical-total 225.0
-Data Collection
-bash# Fetch all data (historical + current + upcoming)
-python fetch_data.py
-
-# Fetch only upcoming games
-python fetch_upcoming_games.py
-
-# Custom date ranges
-python main.py --days-back 30 --days-ahead 14
-Testing & Debugging
-bash# Test betting strategy
-python betting_strategy.py
-
-# Test free NBA APIs
-python free_nba_apis.py
-
-# Test data processor
-python data_processor.py
-
-# Test model utilities
-python model_utils.py
-
-# View configuration
-python config.py
-
-⚡ Quick Reference
-Command Hierarchy (Best to Specific)
-PriorityCommandWhat It DoesUse When🥇 #1python ultimate.pyEverything (ML + Totals + Confluence)Daily picks🥈 #2python daily.pyUnified dashboardAlternative view🥉 #3python today.pyMoneyline onlyJust winners/losers#4python totals_predictor.pyTotals onlyJust over/under#5python main.py predictFull week analysisPlanning ahead
-Training Commands
-CommandPurposeFrequencypython main.py --days-back 30Train moneyline modelWeeklypython train_totals_model.pyTrain totals modelWeeklypython main.py --tuneHyperparameter tuningMonthly
-Tracking Commands
-CommandPurposeFrequencypython update_results.py --days 1Update yesterdayDailypython update_results.py --days 7Weekly reviewWeeklypython update_results.py --exportExport to CSVAs needed
-
-🎯 Recommended Workflows
-Workflow 1: Daily Quick Picks (2 minutes)
-bash# Morning
-python ultimate.py
-
-# Evening
-python update_results.py --days 1
-Workflow 2: Fresh Daily Analysis (10 minutes)
-bash# Morning: Full refresh
-python main.py --days-back 30 --max-bets 3
-
-# Get predictions
-python ultimate.py
-
-# Evening: Update
-python update_results.py --days 3
-Workflow 3: Weekly Deep Dive (30 minutes)
-bash# Sunday: Retrain everything
-python main.py --tune --backtest --days-back 60
-python train_totals_model.py
-
-# Check performance
-python update_results.py --days 7 --export
-Workflow 4: Conservative Paper Trading
-bash# Daily: Get high-confidence picks only
-python ultimate.py --min-edge 0.10 --max-bets 2
-
-# Daily: Track results (don't bet real money)
-python update_results.py --days 1
-
-# After 50+ predictions: Review
-python update_results.py --days 30 --export
-
-🚀 Shell Aliases (Recommended)
-Add to ~/.zshrc or ~/.bashrc:
-bash# Navigate to project and activate venv
-alias nba-cd="cd ~/nba-main && source venv/bin/activate"
-
-# Ultimate System (Best)
-alias nba="cd ~/nba-main && source venv/bin/activate && python ultimate.py"
-alias nba-tomorrow="cd ~/nba-main && source venv/bin/activate && python ultimate.py --tomorrow"
-alias nba-all="cd ~/nba-main && source venv/bin/activate && python ultimate.py --show-all"
-
-# Individual Components
-alias nba-ml="cd ~/nba-main && source venv/bin/activate && python today.py"
-alias nba-totals="cd ~/nba-main && source venv/bin/activate && python totals_predictor.py"
-
-# Training
-alias nba-train="cd ~/nba-main && source venv/bin/activate && python main.py --days-back 30 && python train_totals_model.py"
-alias nba-train-ml="cd ~/nba-main && source venv/bin/activate && python main.py --days-back 30"
-alias nba-train-totals="cd ~/nba-main && source venv/bin/activate && python train_totals_model.py"
-
-# Tracking
-alias nba-update="cd ~/nba-main && source venv/bin/activate && python update_results.py --days 1"
-alias nba-weekly="cd ~/nba-main && source venv/bin/activate && python update_results.py --days 7"
-
-# Full refresh
-alias nba-refresh="cd ~/nba-main && source venv/bin/activate && python main.py --days-back 60 && python train_totals_model.py && python ultimate.py"
-Reload: source ~/.zshrc
-Then simply type:
-bashnba              # Today's complete analysis
-nba-tomorrow     # Tomorrow's analysis
-nba-update       # Update results
-nba-train        # Retrain both models
-
-📖 Command Examples
-Getting Predictions
-bash# Best: Complete analysis
-python ultimate.py
-
-# Alternative: Dashboard view
-python daily.py
-
-# Just moneyline picks
-python today.py
-
-# Just totals predictions
-python totals_predictor.py
-
-# Conservative picks only
-python ultimate.py --min-edge 0.08
-
-# Tomorrow's games
-python ultimate.py --tomorrow
-Training Models
-bash# Train moneyline model
+# Train moneyline model
 python main.py --days-back 30
 
 # Train totals model
 python train_totals_model.py
 
-# Train with hyperparameter tuning
-python main.py --tune --days-back 60
+# Full pipeline (fetch data + train + predict)
+python main.py
 
-# Train with backtesting
-python main.py --backtest --days-back 60
-Tracking Performance
-bash# Update yesterday's results
-python update_results.py --days 1
+# Advanced training
+python main.py --tune                  # Hyperparameter tuning
+python main.py --backtest              # Run backtesting
+python main.py --no-update             # Skip data download
+python main.py --days-back 60          # More training data
 
-# Weekly review
-python update_results.py --days 7
+================================================================================
+PERFORMANCE TRACKING
+================================================================================
 
-# Export data
-python update_results.py --days 30 --export
+# Update results
+python update_results.py --days 1      # Update yesterday
+python update_results.py --days 7      # Weekly review
+python update_results.py --export      # Export to CSV
+python update_results.py --no-report   # Update without report
 
-⚠️ Important Notes
-✅ Best Practices:
+================================================================================
+QUICK WORKFLOW
+================================================================================
 
-Run python ultimate.py daily for picks
-Run python update_results.py --days 1 daily to track
-Retrain models weekly: python main.py --days-back 30 + python train_totals_model.py
-Start with --min-edge 0.08 (conservative)
-Use --max-bets 2-3 initially
-Review calibration weekly
+# Daily routine
+python predictions.py                  # Morning: Get picks
+python update_results.py --days 1      # Evening: Track results
 
-🚫 Don't:
+# Weekly routine
+python main.py --days-back 60          # Retrain moneyline
+python train_totals_model.py           # Retrain totals
+python update_results.py --days 7 --export  # Review performance
 
-Ignore performance tracker warnings
-Bet more than 3% per game
-Chase losses by lowering min-edge
-Skip daily result updates
-Trust edges >10% without verification
+================================================================================
+QUICK ALIASES (add to ~/.zshrc)
+================================================================================
 
-⚠️ Before Real Money:
-bash# Paper trade for 100+ games first
-python ultimate.py              # Get picks daily
-python update_results.py --days 1  # Track without betting
+alias nba="cd ~/nba-main && source venv/bin/activate && python predictions.py"
+alias nba-tomorrow="cd ~/nba-main && source venv/bin/activate && python predictions.py --tomorrow"
+alias nba-ml="cd ~/nba-main && source venv/bin/activate && python predictions.py --moneyline"
+alias nba-totals="cd ~/nba-main && source venv/bin/activate && python predictions.py --totals"
+alias nba-train="cd ~/nba-main && source venv/bin/activate && python main.py --days-back 30 && python train_totals_model.py"
+alias nba-update="cd ~/nba-main && source venv/bin/activate && python update_results.py --days 1"
 
-# After 100+ tracked predictions, review:
-python update_results.py --days 30 --export
+================================================================================
+HELP
+================================================================================
 
-🆘 Help & Troubleshooting
-bash# Get help for any command
-python ultimate.py --help
+python predictions.py --help
 python main.py --help
 python update_results.py --help
-
-# Check system status
-python free_nba_apis.py
-
-# View logs
-tail -f logs/nba_predictor_*.log
-
-# Reset data (if needed)
-rm -rf data/current/*.csv
-rm -rf data/upcoming/*.csv
-
-📱 Mobile/Quick Access
-Create a simple script pick.sh:
-bash#!/bin/bash
-cd ~/nba-main
-source venv/bin/activate
-python ultimate.py
-Make executable: chmod +x pick.sh
-Run: ./pick.sh
-
-🎓 Learning Path
-Week 1: Setup & Learn
-bashpython main.py --days-back 30        # Train
-python train_totals_model.py         # Train totals
-python ultimate.py                   # Get picks
-python update_results.py --days 1    # Track (paper)
-Week 2-12: Paper Trade
-bashpython ultimate.py                   # Daily picks
-python update_results.py --days 1    # Daily tracking
-# No real money yet!
-Week 13+: If Profitable on Paper
-bashpython ultimate.py --min-edge 0.08   # Conservative
-# Start with $5-10 bets (not $30)
-python update_results.py --days 1    # Track real results
-
-🏆 The One Command You Need
-If you only remember one command:
-bashpython ultimate.py
-This gives you:
-
-✅ Moneyline picks
-✅ Totals predictions
-✅ Confluence plays
-✅ Performance tracking
-✅ Clean organized output
-
-Everything else is optional!
+python totals_predictor.py --help

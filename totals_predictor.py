@@ -9,6 +9,7 @@ import joblib
 from data_processor import NBADataProcessor
 from betting_strategy import KellyBetting
 from nbautils import log_info, get_team_name
+from model_loader import load_totals_model
 
 class TotalsPredictor:
     """Predict game totals (Over/Under)"""
@@ -16,19 +17,63 @@ class TotalsPredictor:
     def __init__(self, bankroll: float = 1000):
         self.processor = NBADataProcessor()
         self.betting = KellyBetting(bankroll=bankroll)
+        self.totals_model = load_totals_model()
+    
+    def predict_totals_ml(self, game_features):
+        """ML model-based totals (primary method if model exists)"""
+        if not self.totals_model:
+            return None
+        
+        try:
+            # Prepare features - keep as DataFrame to preserve feature names
+            X = pd.DataFrame([game_features[self.totals_model['features']]], columns=self.totals_model['features'])
+            X_scaled = self.totals_model['scaler'].transform(X)
+            
+            # Ensemble prediction
+            pred_rf = self.totals_model['rf'].predict(X_scaled)[0]
+            pred_gb = self.totals_model['gb'].predict(X_scaled)[0]
+            pred_avg = (pred_rf + pred_gb) / 2
+            
+            return pred_avg
+        except Exception as e:
+            log_info(f"Error in ML prediction: {e}")
+            return None
         
     def calculate_expected_total(self, game_features):
         """
         Calculate expected total points using pace and ratings
         
         FIXED FORMULA:
-        Points per team = (Pace / 100) * Offensive Rating
+        Offensive rating is points per 100 possessions
+        Expected points = (Pace / 100) * Offensive Rating
         Total = Home Points + Away Points
         """
+        # Use ML model if available
+        ml_prediction = self.predict_totals_ml(game_features)
+        if ml_prediction is not None:
+            # Use ML model prediction as base, but also calculate formula for comparison
+            pace_avg = (game_features['pace_home'] + game_features['pace_away']) / 2
+            
+            # BUG FIX: Guard against zero/invalid values before division
+            if pace_avg <= 0:
+                log_info("Warning: Invalid pace_avg, using default 100")
+                pace_avg = 100
+            
+            home_expected = (pace_avg / 100) * game_features['off_rating_home']
+            away_expected = (pace_avg / 100) * game_features['off_rating_away']
+            return ml_prediction, home_expected, away_expected
+        
+        # Fallback to formula if no ML model
         pace_avg = (game_features['pace_home'] + game_features['pace_away']) / 2
         
+        # BUG FIX: Guard against zero/invalid values
+        if pace_avg <= 0:
+            log_info("Warning: Invalid pace_avg, using default 100")
+            pace_avg = 100
+        
         # Each team's expected points
-        # Formula: Points = (Pace / 100) * Offensive Rating
+        # Offensive rating = points per 100 possessions
+        # Expected points = (Pace / 100) * Offensive Rating
         home_expected = (pace_avg / 100) * game_features['off_rating_home']
         away_expected = (pace_avg / 100) * game_features['off_rating_away']
         
@@ -64,13 +109,20 @@ class TotalsPredictor:
         upcoming_features['game_date'] = pd.to_datetime(upcoming_features['game_date']).dt.date
         target_games = upcoming_features[upcoming_features['game_date'] == target_date].copy()
         
+        # Check if ML model is loaded (show this always, even if no games)
+        if self.totals_model:
+            print(f"✅ Using trained ML model ({self.totals_model['timestamp']})")
+        else:
+            print(f"⚠️  Using formula-based prediction (no ML model found)")
+            print(f"   Run: python train_totals_model.py to train a model")
+        
         if target_games.empty:
             print(f"\n📭 No games scheduled for {target_date}")
             next_date = upcoming_features['game_date'].min()
             print(f"   Next games: {next_date.strftime('%A, %B %d, %Y')}")
             return
         
-        print(f"🏀 Analyzing {len(target_games)} games...")
+        print(f"\n🏀 Analyzing {len(target_games)} games...")
         print(f"💡 Typical NBA O/U Line: {typical_total}\n")
         
         predictions = []

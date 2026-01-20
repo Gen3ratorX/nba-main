@@ -7,7 +7,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from performance_tracker import PerformanceTracker
 from fetch_data import NBADataCollector
-from nbautils import log_info, log_warning, normalize_team_name
+from nbautils import log_info, log_warning, normalize_team_name, parse_date
+from config import CURRENT_DATA_DIR
 import argparse
 
 class ResultsUpdater:
@@ -16,7 +17,7 @@ class ResultsUpdater:
     def __init__(self):
         self.tracker = PerformanceTracker()
         self.collector = NBADataCollector()
-        self.current_data_dir = Path('data/current')
+        self.current_data_dir = Path(CURRENT_DATA_DIR)
     
     def fetch_recent_results(self, days_back: int = 3) -> pd.DataFrame:
         """
@@ -90,20 +91,39 @@ class ResultsUpdater:
                 pred_away = normalize_team_name(pred['away_team'])
                 pred_date = pred['game_date']
                 
+                # Normalize dates for matching (handle different formats)
+                results_df = results_df.copy()
+                results_df['game_date_parsed'] = pd.to_datetime(results_df['game_date']).dt.date
+                pred_date_parsed = pd.to_datetime(pred_date).date() if isinstance(pred_date, str) else pred_date
+                if hasattr(pred_date_parsed, 'date'):
+                    pred_date_parsed = pred_date_parsed.date()
+                
                 # Try to find matching game in results
                 # Match by teams and date
                 match = results_df[
                     (results_df['home_team'].apply(normalize_team_name) == pred_home) &
                     (results_df['away_team'].apply(normalize_team_name) == pred_away) &
-                    (results_df['game_date'] == pred_date)
+                    (results_df['game_date_parsed'] == pred_date_parsed)
                 ]
                 
+                # BUG FIX: Only use fallback if no date match AND only one game exists
                 if match.empty:
-                    # Try without date (in case date format differs)
-                    match = results_df[
+                    # Try without date only if there's exactly one game between these teams
+                    match_no_date = results_df[
                         (results_df['home_team'].apply(normalize_team_name) == pred_home) &
                         (results_df['away_team'].apply(normalize_team_name) == pred_away)
                     ]
+                    
+                    # Only use this match if there's exactly one game
+                    if len(match_no_date) == 1:
+                        log_warning(f"Date mismatch for {pred_home} vs {pred_away}, but found exactly one game - using it")
+                        match = match_no_date
+                    elif len(match_no_date) > 1:
+                        # Multiple games exist - don't guess which one
+                        log_warning(f"Multiple games found for {pred_home} vs {pred_away} without date match - skipping to avoid wrong match")
+                        stats['not_found'] += 1
+                        continue
+                    # else: no games found at all, will be handled below
                 
                 if not match.empty:
                     game = match.iloc[0]
