@@ -11,6 +11,7 @@ import time
 import json
 from pathlib import Path
 import os
+from time_utils import get_user_timezone, get_nba_timezone, now_in_tz
 
 # ============================================================================
 # 1. NBA STATS API (stats.nba.com) - 100% FREE, NO KEY NEEDED
@@ -24,6 +25,7 @@ class FreeNBAStatsAPI:
     
     def __init__(self):
         self.base_url = "https://stats.nba.com/stats"
+        self.nba_tz = get_nba_timezone()
         
         # Required headers to avoid 403 errors
         self.headers = {
@@ -40,7 +42,7 @@ class FreeNBAStatsAPI:
         Get today's games with live scores
         Endpoint: scoreboardV2
         """
-        today = datetime.now().strftime('%m/%d/%Y')
+        today = now_in_tz(self.nba_tz).strftime('%m/%d/%Y')
         
         url = f"{self.base_url}/scoreboardV2"
         params = {
@@ -256,6 +258,7 @@ class ESPNHiddenAPI:
     def __init__(self):
         self.base_url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
         self.headers = {'User-Agent': 'Mozilla/5.0'}
+        self.nba_tz = get_nba_timezone()
     
     def get_scoreboard(self, date: str = None) -> List[Dict]:
         """
@@ -263,7 +266,7 @@ class ESPNHiddenAPI:
         Format: YYYYMMDD
         """
         if date is None:
-            date = datetime.now().strftime('%Y%m%d')
+            date = now_in_tz(self.nba_tz).strftime('%Y%m%d')
         
         url = f"{self.base_url}/scoreboard"
         params = {'dates': date}
@@ -406,6 +409,8 @@ class FreeNBADataCollector:
     """
     
     def __init__(self, odds_api_key: str = None):
+        self.user_tz = get_user_timezone()
+        self.nba_tz = get_nba_timezone()
         self.nba_stats = FreeNBAStatsAPI()
         self.balldontlie = BallDontLieAPI('0f20cae2-c584-4bd0-bc12-bb5020238cf0')
         self.espn = ESPNHiddenAPI()
@@ -461,7 +466,7 @@ class FreeNBADataCollector:
         """
         # Get upcoming games from ESPN
         print("\n📊 Fetching upcoming games...")
-        today = datetime.now()
+        today = now_in_tz(self.nba_tz).replace(tzinfo=None)
         games = []
         
         for days in range(1, 8):  # Next 7 days
@@ -564,8 +569,9 @@ if __name__ == "__main__":
     # Test 2: Historical data
     print("\n🏀 TEST 2: Recent Historical Games")
     print("-" * 70)
-    start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    nba_tz = get_nba_timezone()
+    start_date = (now_in_tz(nba_tz) - timedelta(days=7)).strftime('%Y-%m-%d')
+    end_date = now_in_tz(nba_tz).strftime('%Y-%m-%d')
     historical = collector.get_historical_games(start_date, end_date)
     print(f"Retrieved {len(historical)} games from past week")
     

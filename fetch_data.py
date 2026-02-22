@@ -10,12 +10,14 @@ from typing import List, Dict
 import time
 from config import *
 from nbautils import log_info, log_error, log_warning, normalize_team_name, ensure_directories
+from time_utils import get_nba_timezone, now_in_tz
 
 class FreeNBADataCollector:
     """NBA Data Collector using 100% FREE APIs"""
     
     def __init__(self):
         ensure_directories()
+        self.nba_tz = get_nba_timezone()
         self.current_season = self._get_current_season()
         
         # NBA Stats API headers
@@ -28,7 +30,7 @@ class FreeNBADataCollector:
     
     def _get_current_season(self) -> str:
         """Calculate current NBA season (e.g., '2024-25')"""
-        now = datetime.now()
+        now = now_in_tz(self.nba_tz)
         if now.month >= 10:  # Season starts in October
             return f"{now.year}-{str(now.year + 1)[2:]}"
         else:
@@ -43,13 +45,14 @@ class FreeNBADataCollector:
         
         try:
             # Calculate dynamic date range
-            current_season_start = datetime(datetime.now().year, 10, 1)
-            if datetime.now().month < 10:
-                current_season_start = datetime(datetime.now().year - 1, 10, 1)
+            now_nba = now_in_tz(self.nba_tz)
+            current_season_start = datetime(now_nba.year, 10, 1)
+            if now_nba.month < 10:
+                current_season_start = datetime(now_nba.year - 1, 10, 1)
             
             # Get last 2 full seasons + current season
             start_date = (current_season_start - timedelta(days=730)).strftime('%Y-%m-%d')
-            end_date = datetime.now().strftime('%Y-%m-%d')
+            end_date = now_nba.strftime('%Y-%m-%d')
             
             log_info(f"Fetching games from {start_date} to {end_date}")
             
@@ -80,7 +83,7 @@ class FreeNBADataCollector:
         log_info(f"Fetching current season data (last {days_back} days via ESPN)...")
         
         try:
-            end_date = datetime.now()
+            end_date = now_in_tz(self.nba_tz).replace(tzinfo=None)
             start_date = end_date - timedelta(days=days_back)
             
             all_games = []
@@ -104,7 +107,7 @@ class FreeNBADataCollector:
                 df = pd.DataFrame(all_games)
                 df = df.drop_duplicates(subset=['game_id'])  # Remove duplicates
                 
-                filename = f"current_season_espn_{datetime.now().strftime('%Y%m%d')}.csv"
+                filename = f"current_season_espn_{now_in_tz(self.nba_tz).strftime('%Y%m%d')}.csv"
                 filepath = CURRENT_DATA_DIR / filename
                 df.to_csv(filepath, index=False)
                 log_info(f"✅ Current season data saved: {len(df)} games")
@@ -126,7 +129,7 @@ class FreeNBADataCollector:
         
         try:
             all_games = []
-            today = datetime.now()
+            today = now_in_tz(self.nba_tz).replace(tzinfo=None)
             
             for days in range(0, days_ahead + 1):  # Include today
                 target_date = today + timedelta(days=days)
@@ -184,11 +187,20 @@ class FreeNBADataCollector:
                     # Parse game date (ESPN format: 2024-01-11T02:00Z)
                     game_date_str = event['date'][:10]  # Take YYYY-MM-DD part
                     
+                    home_abbr_raw = str(home['team']['abbreviation']).strip().upper()
+                    away_abbr_raw = str(away['team']['abbreviation']).strip().upper()
+                    home_code = self._normalize_team_code_quiet(home_abbr_raw)
+                    away_code = self._normalize_team_code_quiet(away_abbr_raw)
+
+                    # Skip non-NBA/exhibition teams (e.g., STARS, WORLD, STRIPES)
+                    if home_code is None or away_code is None:
+                        continue
+
                     games.append({
                         'game_id': event['id'],
                         'game_date': game_date_str,
-                        'home_team': normalize_team_name(home['team']['abbreviation']),
-                        'away_team': normalize_team_name(away['team']['abbreviation']),
+                        'home_team': home_code,
+                        'away_team': away_code,
                         'home_score': int(home.get('score', 0)),
                         'away_score': int(away.get('score', 0)),
                         'season': self.current_season,
@@ -206,6 +218,33 @@ class FreeNBADataCollector:
         except Exception as e:
             log_error(f"Unexpected error parsing ESPN data: {e}")
             return []
+
+    def _normalize_team_code_quiet(self, team_abbr: str):
+        """
+        Quiet normalization for ESPN abbreviations.
+        Returns None for non-NBA teams instead of logging warnings.
+        """
+        if not team_abbr:
+            return None
+
+        code = str(team_abbr).strip().upper()
+        if code in NBA_TEAMS:
+            return code
+
+        espn_mappings = {
+            'WSH': 'WAS',
+            'UT': 'UTA',
+            'NO': 'NOP',
+            'NY': 'NYK',
+            'GS': 'GSW',
+            'SA': 'SAS',
+            'BRK': 'BKN',
+        }
+        mapped = espn_mappings.get(code)
+        if mapped and mapped in NBA_TEAMS:
+            return mapped
+
+        return None
 
     # ------------------------------------------------------------------------
     # Helper: BallDontLie API (Backup/Historical)

@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
+from time_utils import get_user_timezone, now_in_tz
 
 class PerformanceTracker:
     """
@@ -16,8 +17,9 @@ class PerformanceTracker:
     Provides real-time feedback on model accuracy and profitability
     """
     
-    def __init__(self, filepath: str = 'data/performance_history.json'):
+    def __init__(self, filepath: str = 'data/prediction_history.json'):
         self.filepath = Path(filepath)
+        self.user_tz = get_user_timezone()
         self.predictions: List[Dict] = []
         self.load_history()
     
@@ -45,7 +47,7 @@ class PerformanceTracker:
         prediction = {
             'prediction_id': prediction_id,
             'game_id': game_id,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': now_in_tz(self.user_tz).isoformat(),
             'game_date': game_date,
             'home_team': home_team,
             'away_team': away_team,
@@ -93,7 +95,7 @@ class PerformanceTracker:
         pred['actual_winner'] = actual_winner
         pred['correct'] = (pred['predicted_winner'] == actual_winner)
         pred['result_recorded'] = True
-        pred['result_timestamp'] = datetime.now().isoformat()
+        pred['result_timestamp'] = now_in_tz(self.user_tz).isoformat()
         
         if home_score is not None:
             pred['home_score'] = home_score
@@ -405,7 +407,7 @@ Profit:               ${recent['profit']:,.2f}
         with open(self.filepath, 'w') as f:
             json.dump({
                 'predictions': self.predictions,
-                'last_updated': datetime.now().isoformat()
+                'last_updated': now_in_tz(self.user_tz).isoformat()
             }, f, indent=2)
     
     def load_history(self):
@@ -488,4 +490,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

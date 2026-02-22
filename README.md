@@ -242,9 +242,9 @@ python train_totals_model.py
 python main.py
 
 # Advanced training options
-python main.py --tune                 # Hyperparameter tuning (slow)
-python main.py --backtest             # Run backtesting/validation
 python main.py --no-update            # Skip data download
+python main.py --strict-backtest --no-update --days-back 180
+python strict_backtest.py --days-back 180 --splits 8
 ```
 
 ### 📊 Performance Tracking
@@ -304,14 +304,14 @@ python predictions.py --tomorrow      # Tomorrow
 #### main.py (Training)
 | Parameter | Default | Description | Example |
 |-----------|---------|-------------|---------|
-| `--days-back` | 60 | Historical days to fetch | `--days-back 90` |
+| `--days-back` | 120 | Historical days to fetch | `--days-back 180` |
 | `--days-ahead` | 7 | Upcoming days to predict | `--days-ahead 14` |
 | `--bankroll` | 1000 | Starting bankroll ($) | `--bankroll 500` |
-| `--max-bets` | 5 | Max bets per day | `--max-bets 3` |
-| `--min-edge` | 0.05 | Min edge threshold | `--min-edge 0.15` |
+| `--max-bets` | 3 | Max bets per day | `--max-bets 3` |
 | `--no-update` | False | Skip data download | `--no-update` |
-| `--backtest` | False | Run validation | `--backtest` |
-| `--tune` | False | Optimize hyperparameters | `--tune` |
+| `--strict-backtest` | False | Run canonical rolling backtest and exit | `--strict-backtest` |
+| `--backtest-splits` | 8 | Rolling split count | `--backtest-splits 10` |
+| `--backtest-output` | `reports/strict_backtest_latest.json` | Backtest report file | `--backtest-output reports/my_report.json` |
 
 ---
 
@@ -873,10 +873,9 @@ python -c "from xgboost import XGBClassifier; print('Works!')"
 **Solution**:
 ```bash
 # Run backtesting to check calibration
-python main.py --backtest --no-update
+python main.py --strict-backtest --no-update --days-back 180
 
-# Look for "CALIBRATION TEST" section
-# If 70% predictions win <60%, model needs retraining
+# Open reports/strict_backtest_latest.json and review acceptance_gates
 ```
 
 #### Issue 5: "Too slow"
@@ -911,8 +910,9 @@ tail -f logs/nba_predictor_$(date +%Y-%m-%d).log
 ### Run Backtesting
 
 ```bash
-# Moneyline model backtesting
-python main.py --backtest --no-update
+# Canonical rolling backtest
+python main.py --strict-backtest --no-update --days-back 180
+# Report path: reports/strict_backtest_latest.json
 
 # Expected output:
 # - Mean Accuracy: 63-67%

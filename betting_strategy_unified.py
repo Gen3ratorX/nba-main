@@ -34,7 +34,9 @@ class UnifiedBettingSystem:
         self.min_edge_totals = 0.06  # 6% for totals (slightly easier)
         
         # Model calibration (adjust based on your backtest results)
-        self.ml_uncertainty_discount = 0.92  # Discount ML predictions by 8%
+        # CRITICAL: Your ML model showed 25% accuracy on Feb 8 vs 75% test accuracy
+        # This requires aggressive discounting until model is fixed
+        self.ml_uncertainty_discount = 0.80  # Discount ML predictions by 20%
         
         # Portfolio limits
         self.max_total_exposure = 0.15  # Max 15% of bankroll across all bets
