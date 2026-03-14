@@ -109,6 +109,7 @@ class PlayerImpactTracker:
             stats = LeagueDashPlayerStats(
                 season=season,
                 per_mode_detailed="PerGame",
+                timeout=10,
             )
             df = stats.get_data_frames()[0]
 
@@ -123,7 +124,15 @@ class PlayerImpactTracker:
             log_info(f"Fetched season player stats: {len(df)} players ({season})")
             return df
         except Exception as e:
-            log_warning(f"Could not fetch season player stats: {e}")
+            # Fall back to expired disk cache if available
+            if cache_file.exists():
+                df = pd.read_csv(cache_file)
+                self._season_stats_cache[cache_key] = df
+                log_warning(f"NBA.com unavailable, using cached player stats ({len(df)} players)")
+                return df
+            # Cache the empty result so we don't retry and timeout repeatedly
+            log_warning(f"Could not fetch season player stats (will skip retries): {e}")
+            self._season_stats_cache[cache_key] = pd.DataFrame()
             return pd.DataFrame()
 
     # ------------------------------------------------------------------
@@ -151,13 +160,16 @@ class PlayerImpactTracker:
             from nba_api.stats.endpoints import PlayerGameLog
 
             _rate_limit()
-            log = PlayerGameLog(player_id=str(player_id), season=season)
+            log = PlayerGameLog(player_id=str(player_id), season=season, timeout=10)
             df = log.get_data_frames()[0]
             df.to_csv(cache_file, index=False)
             self._game_log_cache[cache_key] = df
             return df.tail(last_n)
         except Exception as e:
-            log_warning(f"Could not fetch game log for player {player_id}: {e}")
+            if cache_file.exists():
+                df = pd.read_csv(cache_file)
+                self._game_log_cache[cache_key] = df
+                return df.tail(last_n)
             return pd.DataFrame()
 
     # ------------------------------------------------------------------
