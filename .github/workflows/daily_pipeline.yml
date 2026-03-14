@@ -42,6 +42,8 @@ jobs:
           path: |
             models/
             data/injury_cache.csv
+            data/prediction_history.json
+            data/model_monitor_history.json
           key: nba-models-${{ github.run_number }}
           restore-keys: |
             nba-models-
@@ -50,9 +52,17 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
-          mkdir -p logs reports
+          mkdir -p logs reports data
           echo "=== NBA Daily Pipeline - $(date) ==="
           python main.py --days-back 120 2>&1 | tee logs/pipeline_$(date +%Y%m%d).log
+        continue-on-error: true
+
+      - name: Model health check + alert
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python model_monitor.py --alert
         continue-on-error: true
 
       - name: Send picks to Telegram
@@ -73,7 +83,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add -f data/*.csv models/*.json reports/*.json logs/*.log 2>/dev/null || true
+          git add -f data/*.csv data/*.json models/*.json reports/*.json logs/*.log 2>/dev/null || true
           git add -f predictions/ 2>/dev/null || true
 
           if git diff --cached --quiet; then

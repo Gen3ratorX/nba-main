@@ -699,6 +699,12 @@ class NBADataProcessor:
                 # 🔥 FIXED: Added back_to_back features to training data
                 'back_to_back_home': is_back_to_back(history, home, date),
                 'back_to_back_away': is_back_to_back(history, away, date),
+                # Head-to-head matchup features
+                'h2h_win_rate': get_h2h_record(history, home, away),
+                'h2h_games_played': len(history[
+                    ((history['home_team'] == home) & (history['away_team'] == away)) |
+                    ((history['home_team'] == away) & (history['away_team'] == home))
+                ]),
             }
             
             # --- Advanced Feature Calculation ---
@@ -880,6 +886,10 @@ class NBADataProcessor:
                 'back_to_back_home': is_back_to_back(history_df, home, date_now),
                 'back_to_back_away': is_back_to_back(history_df, away, date_now),
                 'h2h_win_rate': get_h2h_record(history_df, home, away),
+                'h2h_games_played': len(history_df[
+                    ((history_df['home_team'] == home) & (history_df['away_team'] == away)) |
+                    ((history_df['home_team'] == away) & (history_df['away_team'] == home))
+                ]),
             }
             
             # Interaction

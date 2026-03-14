@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Predictions Dashboard</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --blue: #58a6ff;
+            --purple: #bc8cff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+        header h1 { font-size: 2em; margin-bottom: 5px; }
+        header h1 span { color: var(--blue); }
+        .subtitle { color: var(--muted); font-size: 0.95em; }
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .status-item {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 15px 25px;
+            text-align: center;
+            min-width: 140px;
+        }
+        .status-item .value {
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        .status-item .label {
+            color: var(--muted);
+            font-size: 0.85em;
+            margin-top: 4px;
+        }
+        .green { color: var(--green); }
+        .red { color: var(--red); }
+        .yellow { color: var(--yellow); }
+        .blue { color: var(--blue); }
+
+        h2 {
+            margin: 30px 0 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .picks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 15px;
+        }
+        .pick-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            transition: border-color 0.2s;
+        }
+        .pick-card:hover { border-color: var(--blue); }
+        .pick-card .matchup {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .pick-card .pick-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-top: 1px solid var(--border);
+        }
+        .pick-card .pick-line:first-of-type { border-top: none; }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .badge-high { background: rgba(63,185,80,0.15); color: var(--green); }
+        .badge-med { background: rgba(210,153,34,0.15); color: var(--yellow); }
+        .badge-low { background: rgba(139,148,158,0.15); color: var(--muted); }
+
+        .chart-container {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bar-label { width: 60px; text-align: right; font-size: 0.85em; color: var(--muted); }
+        .bar-track {
+            flex: 1;
+            height: 24px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 8px;
+            font-size: 0.8em;
+            font-weight: 600;
+            min-width: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--muted); font-size: 0.85em; font-weight: 600; text-transform: uppercase; }
+        tr:hover { background: rgba(255,255,255,0.02); }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85em;
+            padding: 30px 0;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        @media (max-width: 600px) {
+            .picks-grid { grid-template-columns: 1fr; }
+            .status-bar { flex-direction: column; align-items: center; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🏀 <span>NBA</span> Predictions</h1>
+        <p class="subtitle">Stacking Ensemble (XGBoost + LightGBM + LR) • Daily at 3 PM ET</p>
+        <p class="subtitle" id="last-updated">Loading...</p>
+    </header>
+
+    <div class="status-bar" id="status-bar">
+        <div class="status-item"><div class="value blue" id="stat-accuracy">—</div><div class="label">Accuracy</div></div>
+        <div class="status-item"><div class="value green" id="stat-roi">—</div><div class="label">ROI</div></div>
+        <div class="status-item"><div class="value" id="stat-brier">—</div><div class="label">Brier Score</div></div>
+        <div class="status-item"><div class="value" id="stat-record">—</div><div class="label">Record</div></div>
+        <div class="status-item"><div class="value" id="stat-streak">—</div><div class="label">Streak</div></div>
+    </div>
+
+    <h2>💎 Today's Picks</h2>
+    <div id="picks-container" class="picks-grid">
+        <div class="loading"><div class="spinner"></div><p>Loading picks...</p></div>
+    </div>
+
+    <h2>📋 Full Slate</h2>
+    <div id="slate-container">
+        <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <h2>📈 Rolling Accuracy (Last 30)</h2>
+    <div class="chart-container" id="accuracy-chart">
+        <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <h2>📊 Recent Results</h2>
+    <div id="results-container">
+        <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <footer>
+        <p>Powered by NBA Prediction System v2.0 • Data refreshed daily via GitHub Actions</p>
+        <p>⚠️ For informational purposes only. Not financial advice.</p>
+    </footer>
+
+    <script>
+        const REPO = 'Gen3ratorX/nba-main';
+        const DATA_BRANCH = 'main';
+
+        async function fetchJSON(path) {
+            const url = `https://raw.githubusercontent.com/${REPO}/${DATA_BRANCH}/${path}`;
+            try {
+                const resp = await fetch(url, { cache: 'no-store' });
+                if (!resp.ok) return null;
+                return await resp.json();
+            } catch { return null; }
+        }
+
+        function pct(v) { return (v * 100).toFixed(1) + '%'; }
+
+        async function loadDashboard() {
+            // Load data files in parallel
+            const [backtest, monitor, predictions] = await Promise.all([
+                fetchJSON('reports/strict_backtest_latest.json'),
+                fetchJSON('data/model_monitor_history.json'),
+                fetchJSON('data/prediction_history.json'),
+            ]);
+
+            // Status bar from backtest
+            if (backtest) {
+                const r = backtest.aggregated_metrics || {};
+                document.getElementById('stat-accuracy').textContent = pct(r.mean_accuracy || 0);
+                document.getElementById('stat-brier').textContent = (r.mean_brier || 0).toFixed(3);
+
+                const roi = r.mean_roi || 0;
+                const roiEl = document.getElementById('stat-roi');
+                roiEl.textContent = (roi >= 0 ? '+' : '') + pct(roi);
+                roiEl.className = 'value ' + (roi >= 0 ? 'green' : 'red');
+
+                document.getElementById('last-updated').textContent =
+                    'Last backtest: ' + (backtest.generated_at || '').slice(0, 16).replace('T', ' ');
+            }
+
+            // Predictions data
+            let preds = [];
+            if (predictions) {
+                preds = Array.isArray(predictions) ? predictions : (predictions.predictions || []);
+            }
+
+            // Record & streak
+            const resolved = preds.filter(p =>
+                ['win','loss','W','L'].includes(p.result) || [true,false,1,0].includes(p.result)
+            );
+            const wins = resolved.filter(p => ['win','W'].includes(p.result) || p.result === true || p.result === 1).length;
+            const losses = resolved.length - wins;
+            document.getElementById('stat-record').textContent = `${wins}W-${losses}L`;
+
+            let streak = 0;
+            for (let i = resolved.length - 1; i >= 0; i--) {
+                const r = resolved[i].result;
+                const won = ['win','W'].includes(r) || r === true || r === 1;
+                if (i === resolved.length - 1) {
+                    streak = won ? 1 : -1;
+                } else {
+                    const prevWon = streak > 0;
+                    if (won === prevWon) {
+                        streak += won ? 1 : -1;
+                    } else break;
+                }
+            }
+            const streakEl = document.getElementById('stat-streak');
+            if (streak > 0) {
+                streakEl.textContent = `W${streak}`;
+                streakEl.className = 'value green';
+            } else if (streak < 0) {
+                streakEl.textContent = `L${Math.abs(streak)}`;
+                streakEl.className = 'value red';
+            } else {
+                streakEl.textContent = '—';
+            }
+
+            // Today's picks — show most recent unresolved predictions
+            const unresolved = preds.filter(p => !p.result);
+            const picksHtml = unresolved.length ? unresolved.slice(-10).map(p => {
+                const conf = (p.confidence || 'medium').toLowerCase();
+                const badgeClass = conf === 'high' ? 'badge-high' : conf === 'medium' ? 'badge-med' : 'badge-low';
+                const prob = p.probability || p.win_probability || 0;
+                const probStr = typeof prob === 'number' ? pct(prob > 1 ? prob/100 : prob) : prob;
+                return `
+                    <div class="pick-card">
+                        <div class="matchup">${p.away || '?'} @ ${p.home || '?'}</div>
+                        <div class="pick-line">
+                            <span>🏆 ${p.pick || p.ml_pick || '?'}</span>
+                            <span class="badge ${badgeClass}">${conf.toUpperCase()}</span>
+                        </div>
+                        <div class="pick-line">
+                            <span>Win Prob</span><span class="blue">${probStr}</span>
+                        </div>
+                        ${p.edge ? `<div class="pick-line"><span>Edge</span><span class="green">${p.edge}%</span></div>` : ''}
+                        ${p.bet_amount ? `<div class="pick-line"><span>Bet</span><span>$${p.bet_amount}</span></div>` : ''}
+                    </div>`;
+            }).join('') : '<p style="color:var(--muted);padding:20px;">No pending picks. Check back at 3 PM ET.</p>';
+            document.getElementById('picks-container').innerHTML = picksHtml;
+
+            // Full slate placeholder
+            document.getElementById('slate-container').innerHTML = unresolved.length
+                ? `<table><thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Pick</th><th>Prob</th></tr></thead><tbody>${
+                    unresolved.slice(-15).map(p => {
+                        const prob = p.probability || p.win_probability || 0;
+                        const probStr = typeof prob === 'number' ? pct(prob > 1 ? prob/100 : prob) : prob;
+                        return `<tr><td>${p.date || p.game_date || '—'}</td><td>${p.away || '?'}</td><td>${p.home || '?'}</td><td>${p.pick || p.ml_pick || '?'}</td><td>${probStr}</td></tr>`;
+                    }).join('')
+                }</tbody></table>`
+                : '<p style="color:var(--muted);padding:20px;">No games scheduled.</p>';
+
+            // Accuracy chart from monitor history
+            if (monitor && monitor.length > 0) {
+                const recent = monitor.slice(-15);
+                const maxAcc = Math.max(...recent.map(h => h.accuracy), 0.7);
+                document.getElementById('accuracy-chart').innerHTML = `
+                    <div class="bar-chart">${recent.map(h => {
+                        const w = (h.accuracy / maxAcc * 100).toFixed(0);
+                        const color = h.accuracy >= 0.6 ? 'var(--green)' : h.accuracy >= 0.52 ? 'var(--yellow)' : 'var(--red)';
+                        return `<div class="bar-row">
+                            <div class="bar-label">${h.date.slice(5)}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width:${w}%;background:${color}">${pct(h.accuracy)}</div>
+                            </div>
+                        </div>`;
+                    }).join('')}</div>`;
+            } else {
+                document.getElementById('accuracy-chart').innerHTML =
+                    '<p style="color:var(--muted);padding:20px;">No monitoring data yet. Run the pipeline to start tracking.</p>';
+            }
+
+            // Recent results
+            if (resolved.length > 0) {
+                const recentResults = resolved.slice(-15).reverse();
+                document.getElementById('results-container').innerHTML = `
+                    <table>
+                        <thead><tr><th>Date</th><th>Game</th><th>Pick</th><th>Prob</th><th>Result</th></tr></thead>
+                        <tbody>${recentResults.map(p => {
+                            const r = p.result;
+                            const won = ['win','W'].includes(r) || r === true || r === 1;
+                            const prob = p.probability || p.win_probability || 0;
+                            const probStr = typeof prob === 'number' ? pct(prob > 1 ? prob/100 : prob) : prob;
+                            return `<tr>
+                                <td>${p.date || p.game_date || '—'}</td>
+                                <td>${p.away || '?'} @ ${p.home || '?'}</td>
+                                <td>${p.pick || p.ml_pick || '?'}</td>
+                                <td>${probStr}</td>
+                                <td class="${won ? 'green' : 'red'}">${won ? '✅ W' : '❌ L'}</td>
+                            </tr>`;
+                        }).join('')}</tbody>
+                    </table>`;
+            } else {
+                document.getElementById('results-container').innerHTML =
+                    '<p style="color:var(--muted);padding:20px;">No resolved predictions yet.</p>';
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

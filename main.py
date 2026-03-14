@@ -309,29 +309,12 @@ class UnifiedNBAPredictionSystem:
         """Train calibrated moneyline model with TimeSeriesSplit CV"""
         valid_df = features_df.dropna(subset=['home_won']).iloc[15:].copy()
 
-        # Feature set (team stats + EWMA + vegas + player availability)
-        features = [
-            'home_court_advantage', 'form_diff', 'elo_diff', 'fatigue_index', 'rest_diff',
-            'pace_home_L5', 'pace_away_L5', 'combined_pace',
-            'off_rating_home_L10', 'off_rating_away_L10',
-            'def_rating_home_L10', 'def_rating_away_L10',
-            'back_to_back_home', 'back_to_back_away',
-            'schedule_strength_diff', 'net_rating_diff', 'def_rating_diff',
-            # EWMA recency-weighted features
-            'ewma_ppg_home', 'ewma_ppg_away',
-            'ewma_papg_home', 'ewma_papg_away',
-            'ewma_net_diff',
-            # Vegas implied probability features
-            'vegas_implied_home', 'vegas_implied_away', 'vegas_implied_diff',
-            'vegas_total_line', 'has_vegas_odds',
-            # Player availability features
-            'minutes_missing_home', 'minutes_missing_away',
-            'star_missing_home', 'star_missing_away',
-            'roster_strength_home', 'roster_strength_away',
-            # Line movement features
-            'ml_movement_home', 'ml_movement_magnitude',
-            'total_line_movement', 'odds_snapshot_count',
-        ]
+        # Dynamic feature set — only include features with actual data
+        from strict_backtest import get_active_features, CANONICAL_FEATURES
+        for f in CANONICAL_FEATURES:
+            if f not in valid_df.columns:
+                valid_df[f] = 0
+        features = get_active_features(valid_df)
 
         # Ensure features exist
         for f in features:
@@ -875,7 +858,7 @@ def main():
     if args.tune:
         from hyperopt import tune_all
         from data_processor import NBADataProcessor
-        from strict_backtest import CANONICAL_FEATURES
+        from strict_backtest import CANONICAL_FEATURES, get_active_features
 
         print("\n⏳ Running Optuna hyperparameter tuning...")
         processor = NBADataProcessor()
@@ -884,7 +867,8 @@ def main():
         for f in CANONICAL_FEATURES:
             if f not in df.columns:
                 df[f] = 0
-        X_tune = df[CANONICAL_FEATURES].copy()
+        active = get_active_features(df)
+        X_tune = df[active].copy()
         y_tune = df['home_won'].astype(int).copy()
         tune_all(X_tune, y_tune, n_trials=args.tune_trials, force=True)
         print("✅ Tuning complete. Params cached to models/optuna_best_params.json\n")

@@ -34,28 +34,50 @@ except Exception:
     XGBOOST_AVAILABLE = False
 
 
-CANONICAL_FEATURES = [
-    'home_court_advantage', 'form_diff', 'elo_diff', 'fatigue_index', 'rest_diff',
+# Core features (always active — proven positive importance)
+CORE_FEATURES = [
+    'form_diff', 'elo_diff', 'fatigue_index', 'rest_diff',
     'pace_home_L5', 'pace_away_L5', 'combined_pace',
     'off_rating_home_L10', 'off_rating_away_L10',
-    'def_rating_home_L10', 'def_rating_away_L10',
     'back_to_back_home', 'back_to_back_away',
-    'schedule_strength_diff', 'net_rating_diff', 'def_rating_diff',
+    'net_rating_diff',
     # EWMA recency-weighted features
-    'ewma_ppg_home', 'ewma_ppg_away',
+    'ewma_ppg_home',
     'ewma_papg_home', 'ewma_papg_away',
     'ewma_net_diff',
-    # Vegas implied probability features
-    'vegas_implied_home', 'vegas_implied_away', 'vegas_implied_diff',
-    'vegas_total_line', 'has_vegas_odds',
     # Player availability features
     'minutes_missing_home', 'minutes_missing_away',
     'star_missing_home', 'star_missing_away',
-    'roster_strength_home', 'roster_strength_away',
-    # Line movement features
+    'roster_strength_home',
+    # Head-to-head features
+    'h2h_win_rate', 'h2h_games_played',
+]
+
+# Activated when odds data is available (auto-detected)
+ODDS_FEATURES = [
+    'vegas_implied_home', 'vegas_implied_away', 'vegas_implied_diff',
+    'vegas_total_line', 'has_vegas_odds',
     'ml_movement_home', 'ml_movement_magnitude',
     'total_line_movement', 'odds_snapshot_count',
 ]
+
+# Pruned — negative permutation importance (hurt accuracy):
+# 'home_court_advantage', 'ewma_ppg_away', 'def_rating_home_L10',
+# 'def_rating_away_L10', 'roster_strength_away', 'def_rating_diff',
+# 'schedule_strength_diff'
+
+
+def get_active_features(df):
+    """Return features that actually have data (non-zero variance)."""
+    active = list(CORE_FEATURES)
+    for f in ODDS_FEATURES:
+        if f in df.columns and df[f].std() > 1e-8:
+            active.append(f)
+    return active
+
+
+# For backward compat — callers that reference CANONICAL_FEATURES
+CANONICAL_FEATURES = CORE_FEATURES + ODDS_FEATURES
 
 CALIBRATION_ECE_MAX = 0.12
 
@@ -368,7 +390,10 @@ def run_strict_backtest(
     available_away_odds = [c for c in AWAY_ODDS_COLUMNS if c in df.columns]
     available_generic_odds = [c for c in GENERIC_ODDS_COLUMNS if c in df.columns]
 
-    X = df[CANONICAL_FEATURES].copy()
+    active_features = get_active_features(df)
+    log_info(f"Active features: {len(active_features)} / {len(CANONICAL_FEATURES)} "
+             f"({len(CANONICAL_FEATURES) - len(active_features)} pruned/inactive)")
+    X = df[active_features].copy()
     y = df['home_won'].astype(int).copy()
     dates = df['game_date'].copy()
 
@@ -586,7 +611,7 @@ def run_strict_backtest(
             'days_back': int(days_back),
             'n_splits_requested': int(n_splits),
             'n_splits_used': int(max_splits),
-            'features': CANONICAL_FEATURES,
+            'features': active_features,
             'probability_clipping': [0.05, 0.95],
             'pick_rule': 'flat 1u when max(home_prob, away_prob) >= 0.55',
             'odds_mode': 'market-aware (per-game American odds if available; fallback -110)',
