@@ -189,22 +189,24 @@ def format_alert_message(report: dict) -> str | None:
         severity_icon = "🔴" if alert["severity"] == "high" else "🟡"
         lines.append(f"{severity_icon} {alert['message']}")
 
-    lines.append(f"\n📊 Rolling stats (last {report['rolling_window']}):")
-    lines.append(f"  Accuracy: {report['accuracy']:.1%} ({report['wins']}W-{report['losses']}L)")
-    if report["brier_score"]:
+    lines.append(f"\n📊 Rolling stats (last {report.get('rolling_window', 20)}):")
+    lines.append(f"  Accuracy: {report.get('accuracy', 0):.1%} ({report.get('wins', 0)}W-{report.get('losses', 0)}L)")
+    if report.get("brier_score"):
         lines.append(f"  Brier: {report['brier_score']:.4f}")
-    lines.append(f"  Total predictions: {report['total_resolved']}")
+    lines.append(f"  Total predictions: {report.get('total_resolved', 0)}")
 
     return "\n".join(lines)
 
 
 def format_status_message(report: dict) -> str:
     """Format a brief status line (non-alert, for daily summary)."""
+    if report.get("status") == "insufficient_data":
+        return f"⚪ Model: {report.get('message', 'Not enough data yet')}"
     icons = {"excellent": "🟢", "good": "🟢", "ok": "🟡", "alert": "🔴"}
     icon = icons.get(report["status"], "⚪")
-    acc = report["accuracy"]
-    msg = f"{icon} Model: {acc:.1%} accuracy ({report['wins']}W-{report['losses']}L last {report['recent_count']})"
-    if report["brier_score"]:
+    acc = report.get("accuracy", 0)
+    msg = f"{icon} Model: {acc:.1%} accuracy ({report.get('wins', 0)}W-{report.get('losses', 0)}L last {report.get('recent_count', 0)})"
+    if report.get("brier_score"):
         msg += f" | Brier: {report['brier_score']:.4f}"
     return msg
 

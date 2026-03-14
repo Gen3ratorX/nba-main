@@ -20,6 +20,47 @@ from urllib import request, parse
 import json
 
 
+# Fix truncated team names from the pipeline's fixed-width table columns
+_TEAM_EXPAND = {
+    "Philadel": "76ers", "Philadelp": "76ers", "Philadelphia 76": "76ers",
+    "San Anto": "Spurs", "San Anton": "Spurs", "San Antonio Spu": "Spurs",
+    "Clevelan": "Cavaliers", "Cleveland Caval": "Cavaliers",
+    "Milwauke": "Bucks", "Milwaukee Bucks": "Bucks",
+    "Golden S": "Warriors", "Golden State Wa": "Warriors",
+    "Minnesot": "Timberwolves", "Minnesota Timbe": "Timberwolves",
+    "Oklahoma": "Thunder", "Oklahoma City T": "Thunder",
+    "Charlott": "Hornets", "Charlotte Horne": "Hornets",
+    "Portland": "Trail Blazers", "Portland Trail": "Trail Blazers",
+    "Washingt": "Wizards", "Washington Wiza": "Wizards",
+    "Los Ange": "Lakers", "Los Angeles Lak": "Lakers",
+    "LA Clipp": "Clippers", "LA Clipper": "Clippers",
+    "Sacramen": "Kings", "Sacramento King": "Kings",
+    "Brooklyn": "Nets", "Brooklyn Nets": "Nets",
+    "New York": "Knicks", "New York Knicks": "Knicks",
+    "Indiana": "Pacers", "Indiana Pacers": "Pacers",
+    "Atlanta": "Hawks", "Atlanta Hawks": "Hawks",
+    "Boston C": "Celtics", "Boston Celtics": "Celtics",
+    "Chicago": "Bulls", "Chicago Bulls": "Bulls",
+    "Dallas M": "Mavericks", "Dallas Maverick": "Mavericks",
+    "Denver N": "Nuggets", "Denver Nuggets": "Nuggets",
+    "Detroit": "Pistons", "Detroit Pistons": "Pistons",
+    "Houston": "Rockets", "Houston Rockets": "Rockets",
+    "Memphis": "Grizzlies", "Memphis Grizzli": "Grizzlies",
+    "Miami He": "Heat", "Miami Heat": "Heat",
+    "New Orle": "Pelicans", "New Orleans Pel": "Pelicans",
+    "Orlando": "Magic", "Orlando Magic": "Magic",
+    "Phoenix": "Suns", "Phoenix Suns": "Suns",
+    "Toronto": "Raptors", "Toronto Raptors": "Raptors",
+    "Utah Jaz": "Jazz", "Utah Jazz": "Jazz",
+}
+
+
+def _expand_team(name: str) -> str:
+    """Expand a truncated team name to its short nickname."""
+    name = name.strip()
+    return _TEAM_EXPAND.get(name, name)
+
+
 def _find_latest_log() -> Path | None:
     logs_dir = Path("logs")
     if not logs_dir.exists():
@@ -73,8 +114,8 @@ def _parse_picks(log_text: str) -> dict:
             # Game matchup
             gm = re.search(r"(.+?)\s+@\s+(.+)", stripped)
             if gm and "@" in stripped and "MONEYLINE" not in stripped:
-                current_bet["away"] = gm.group(1).strip()
-                current_bet["home"] = gm.group(2).strip()
+                current_bet["away"] = _expand_team(gm.group(1))
+                current_bet["home"] = _expand_team(gm.group(2))
 
             # Moneyline pick
             mm = re.search(r"MONEYLINE:\s*(.+)", stripped)
@@ -121,9 +162,9 @@ def _parse_picks(log_text: str) -> dict:
             if len(parts) >= 7:
                 result["full_slate"].append({
                     "date": parts[0],
-                    "home": parts[1],
-                    "away": parts[2],
-                    "pick": parts[3],
+                    "home": _expand_team(parts[1]),
+                    "away": _expand_team(parts[2]),
+                    "pick": _expand_team(parts[3]),
                     "prob": parts[4],
                 })
 
