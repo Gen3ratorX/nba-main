@@ -221,18 +221,34 @@ class NBATotalsModel:
         final_preds = self.model_main.predict(X_scaled)
         final_bias_metrics = self.analyze_bias(y, final_preds, "Final Training")
         
-        # --- FIXED FEATURE IMPORTANCE SECTION ---
+        # --- FEATURE IMPORTANCE SECTION ---
+        # Some environments (sandboxed runners) restrict process spawning; keep this robust.
         print("\n🔬 FEATURE IMPORTANCE ANALYSIS (Permutation-based)")
         print("="*80)
-        # HistGradientBoosting doesn't have .feature_importances_, so we use permutation
-        perm_result = permutation_importance(
-            self.model_main, X_scaled, y, n_repeats=5, random_state=42, n_jobs=-1
-        )
-        
-        importances = pd.DataFrame({
-            'feature': self.feature_cols,
-            'importance': perm_result.importances_mean
-        }).sort_values('importance', ascending=False)
+        try:
+            # HistGradientBoosting doesn't have .feature_importances_, so we use permutation.
+            # Use threading + n_jobs=1 to avoid OS-level multiprocessing restrictions.
+            try:
+                from joblib import parallel_backend
+                with parallel_backend('threading'):
+                    perm_result = permutation_importance(
+                        self.model_main, X_scaled, y, n_repeats=5, random_state=42, n_jobs=1
+                    )
+            except Exception:
+                perm_result = permutation_importance(
+                    self.model_main, X_scaled, y, n_repeats=5, random_state=42, n_jobs=1
+                )
+
+            importances = pd.DataFrame({
+                'feature': self.feature_cols,
+                'importance': perm_result.importances_mean
+            }).sort_values('importance', ascending=False)
+        except Exception as e:
+            print(f"⚠️  Feature importance skipped: {e}")
+            importances = pd.DataFrame({
+                'feature': self.feature_cols,
+                'importance': [0.0] * len(self.feature_cols)
+            })
         
         # Normalize for balance calculation
         total_imp = importances['importance'].sum()

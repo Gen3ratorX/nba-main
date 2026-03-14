@@ -33,6 +33,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, log_loss
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.calibration import CalibratedClassifierCV
 
 # XGBoost
@@ -52,6 +53,11 @@ from totals_inference import predict_totals_for_game
 from model_loader import load_totals_model
 from strict_backtest import run_strict_backtest
 from time_utils import get_user_timezone, get_nba_timezone, now_in_tz
+from warehouse import NBAWarehouse, sync_canonical_csvs_to_warehouse
+from decision_ai import DecisionAI
+from player_impact import PlayerImpactTracker
+from ensemble import build_ensemble_pipeline
+from hyperopt import tune_all, get_best_params
 
 class UnifiedNBAPredictionSystem:
     def __init__(self, bankroll: float = None):
@@ -77,6 +83,10 @@ class UnifiedNBAPredictionSystem:
         self.vegas_odds = pd.DataFrame()
         self.user_tz = get_user_timezone()
         self.nba_tz = get_nba_timezone()
+
+        # Central warehouse (SQLite) for canonical data + run audit trail.
+        self.warehouse = NBAWarehouse()
+        self.run_id = None
         
         log_info(f"Unified NBA System initialized (Bankroll: ${bankroll:,.2f})")
         log_info(f"Settings: ML edge ≥10%, Totals edge ≥6%, Max 3 bets/day")
@@ -121,7 +131,20 @@ class UnifiedNBAPredictionSystem:
         print("\n" + "="*90)
         print("🏀 UNIFIED NBA PREDICTION SYSTEM V2.0 (CALIBRATED)")
         print("="*90 + "\n")
-        
+
+        # Start warehouse run + sync canonical CSVs (centralize data).
+        self.run_id = self.warehouse.start_run(meta={
+            "user_timezone": getattr(self.user_tz, "key", str(self.user_tz)),
+            "nba_timezone": getattr(self.nba_tz, "key", str(self.nba_tz)),
+            "update_data": bool(update_data),
+            "retrain_model": bool(retrain_model),
+        })
+        sync_canonical_csvs_to_warehouse(self.warehouse)
+        # Export warehouse odds to CSV so training data picks them up.
+        odds_exported = self.warehouse.export_odds_to_csv()
+        if odds_exported:
+            log_info(f"📊 Synced {odds_exported} odds records to history CSV")
+
         # Step 1: Update Data
         if update_data:
             log_info("📥 STEP 1: Updating data...")
@@ -155,6 +178,8 @@ class UnifiedNBAPredictionSystem:
             if not self.vegas_odds.empty:
                 log_info(f"✅ Fetched odds for {len(self.vegas_odds)} games")
                 self.odds_fetcher.display_odds_summary()
+                # Store odds snapshot in warehouse for later analysis/training.
+                self.warehouse.ingest_odds_snapshot_df(self.run_id, self.vegas_odds)
             else:
                 log_warning("⚠️  No Vegas odds available")
                 log_warning("   System will operate in MODEL-ONLY mode (less reliable)")
@@ -205,7 +230,10 @@ class UnifiedNBAPredictionSystem:
             
             # Add derived features
             upcoming_features = self._add_derived_features(upcoming_features)
-            
+
+            # Inject live Vegas odds as features (overwrite imputed defaults)
+            upcoming_features = self._merge_live_vegas_features(upcoming_features)
+
             # Ensure all features exist
             for f in model_results['feature_names']:
                 if f not in upcoming_features.columns:
@@ -219,20 +247,16 @@ class UnifiedNBAPredictionSystem:
                 X_model_input = X_pred
             probs = model_results['model'].predict_proba(X_model_input)
 
-            # Reliability mapping learned at train-time.
+            # Reliability mapping learned at train-time (already shrinks toward 50/50).
             alpha = float(model_results.get('reliability_alpha', 1.0))
             p_home = self._apply_reliability_map(probs[:, 1], alpha)
-            probs_mapped = np.column_stack([1.0 - p_home, p_home])
+            probs_final = np.column_stack([1.0 - p_home, p_home])
 
-            # Final clip to prevent overconfidence tails.
-            probs_clipped = np.clip(probs_mapped, 0.30, 0.70)
-            probs_clipped = probs_clipped / probs_clipped.sum(axis=1, keepdims=True)
-            
             # Format results
             preds = upcoming_features.copy()
-            preds['home_win_probability'] = probs_clipped[:, 1]
-            preds['away_win_probability'] = probs_clipped[:, 0]
-            preds['predicted_home_win'] = probs_clipped[:, 1] > 0.5
+            preds['home_win_probability'] = probs_final[:, 1]
+            preds['away_win_probability'] = probs_final[:, 0]
+            preds['predicted_home_win'] = probs_final[:, 1] > 0.5
             preds['confidence_level'] = preds.apply(self._get_confidence, axis=1)
             
             # Add totals predictions
@@ -254,84 +278,120 @@ class UnifiedNBAPredictionSystem:
             traceback.print_exc()
             return False
         
+        # Step 6: Auto-update results for previous predictions
+        self._auto_update_results()
+
         print("\n" + "="*90)
         print("✅ PIPELINE COMPLETED")
         print("="*90 + "\n")
         return True
+
+    def _auto_update_results(self):
+        """Automatically fetch recent game results and close out pending predictions."""
+        try:
+            from update_results import ResultsUpdater
+            updater = ResultsUpdater()
+            stats = updater.run_update(days_back=3, show_report=False)
+            if stats.get('updated', 0) > 0:
+                log_info(f"📊 Auto-updated {stats['updated']} prediction results")
+
+                # Show quick accuracy summary
+                overall = updater.tracker.get_overall_stats()
+                if overall and overall.get('total_predictions', 0) >= 5:
+                    acc = overall.get('accuracy', 0)
+                    roi = overall.get('roi', 0)
+                    total = overall.get('total_predictions', 0)
+                    log_info(f"   Lifetime: {acc:.1%} accuracy, {roi:+.1%} ROI ({total} predictions)")
+        except Exception as e:
+            log_warning(f"Auto-update results skipped: {e}")
     
     def _train_moneyline_model(self, features_df):
-        """Train calibrated moneyline model with isotonic calibration"""
+        """Train calibrated moneyline model with TimeSeriesSplit CV"""
         valid_df = features_df.dropna(subset=['home_won']).iloc[15:].copy()
-        
-        # Reduced feature set (anti-overfitting)
+
+        # Feature set (team stats + EWMA + vegas + player availability)
         features = [
             'home_court_advantage', 'form_diff', 'elo_diff', 'fatigue_index', 'rest_diff',
             'pace_home_L5', 'pace_away_L5', 'combined_pace',
             'off_rating_home_L10', 'off_rating_away_L10',
             'def_rating_home_L10', 'def_rating_away_L10',
             'back_to_back_home', 'back_to_back_away',
-            'schedule_strength_diff', 'net_rating_diff', 'def_rating_diff'
+            'schedule_strength_diff', 'net_rating_diff', 'def_rating_diff',
+            # EWMA recency-weighted features
+            'ewma_ppg_home', 'ewma_ppg_away',
+            'ewma_papg_home', 'ewma_papg_away',
+            'ewma_net_diff',
+            # Vegas implied probability features
+            'vegas_implied_home', 'vegas_implied_away', 'vegas_implied_diff',
+            'vegas_total_line', 'has_vegas_odds',
+            # Player availability features
+            'minutes_missing_home', 'minutes_missing_away',
+            'star_missing_home', 'star_missing_away',
+            'roster_strength_home', 'roster_strength_away',
+            # Line movement features
+            'ml_movement_home', 'ml_movement_magnitude',
+            'total_line_movement', 'odds_snapshot_count',
         ]
-        
+
         # Ensure features exist
         for f in features:
             if f not in valid_df.columns:
                 valid_df[f] = 0
-        
+
         X = valid_df[features].copy()
         y = valid_df['home_won'].copy()
-        
+
         log_info(f"Training with {len(features)} features on {len(X)} games")
-        
-        # Train/test split
+
+        # Holdout split: reserve last 20% for final evaluation
         split_idx = int(len(X) * 0.8)
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
-        
-        # Build conservative pipeline
-        if XGBOOST_AVAILABLE:
-            classifier = XGBClassifier(
-                n_estimators=100, max_depth=3, learning_rate=0.1,
-                min_child_weight=10, subsample=0.7, colsample_bytree=0.7,
-                gamma=0.3, reg_alpha=0.5, reg_lambda=3.0,
-                random_state=42, n_jobs=-1, eval_metric='logloss'
+
+        # Build stacking ensemble (XGBoost + LightGBM + LogReg → meta-LR)
+        # Uses Optuna-tuned params if available, else sensible defaults.
+        ensemble = build_ensemble_pipeline(
+            xgb_params=get_best_params("xgboost"),
+            lgbm_params=get_best_params("lightgbm"),
+        )
+
+        # TimeSeriesSplit CV for stability reporting
+        tscv = TimeSeriesSplit(n_splits=5)
+        cv_scores = []
+        for fold, (tr_idx, val_idx) in enumerate(tscv.split(X_train), 1):
+            fold_ens = build_ensemble_pipeline(
+                xgb_params=get_best_params("xgboost"),
+                lgbm_params=get_best_params("lightgbm"),
             )
-        else:
-            classifier = RandomForestClassifier(
-                n_estimators=150, max_depth=5,
-                min_samples_leaf=10, min_samples_split=20,
-                random_state=42, n_jobs=-1
-            )
-        
-        pipeline = Pipeline([
-            ('imputer', SimpleImputer(strategy='mean')),
-            ('scaler', StandardScaler()),
-            ('classifier', classifier)
-        ])
-        
-        # Train
-        pipeline.fit(X_train, y_train)
-        
-        # Evaluate
-        train_acc = accuracy_score(y_train, pipeline.predict(X_train))
-        test_acc = accuracy_score(y_test, pipeline.predict(X_test))
-        
+            fold_ens.fit(X_train.iloc[tr_idx], y_train.iloc[tr_idx])
+            fold_acc = accuracy_score(y_train.iloc[val_idx], fold_ens.predict(X_train.iloc[val_idx]))
+            cv_scores.append(fold_acc)
+
+        # Train final ensemble on full training set
+        ensemble.fit(X_train, y_train)
+
+        # Evaluate on holdout
+        train_acc = accuracy_score(y_train, ensemble.predict(X_train))
+        test_acc = accuracy_score(y_test, ensemble.predict(X_test))
+
         print("\n" + "="*80)
         print("📊 MONEYLINE MODEL PERFORMANCE")
         print("="*80)
+        print(f"CV Fold Accuracies:  {', '.join(f'{s:.1%}' for s in cv_scores)}")
+        print(f"CV Mean Accuracy:    {np.mean(cv_scores):.1%} +/- {np.std(cv_scores):.1%}")
         print(f"Training Accuracy:   {train_acc:.1%}")
-        print(f"Test Accuracy:       {test_acc:.1%} ← REAL ACCURACY")
+        print(f"Holdout Accuracy:    {test_acc:.1%} ← REAL ACCURACY")
         print(f"Overfitting Gap:     {(train_acc - test_acc):.1%}")
         print("="*80 + "\n")
-        
-        # Calibrate with SIGMOID for better stability on smaller/shifted samples.
-        log_info("🎯 Calibrating probabilities with sigmoid calibration...")
-        calibrated_pipeline = CalibratedClassifierCV(pipeline, method='sigmoid', cv=5)
-        calibrated_pipeline.fit(X_train, y_train)
+
+        # The StackedEnsemble's meta-learner (LogisticRegression) already produces
+        # well-calibrated probabilities. Skip CalibratedClassifierCV to avoid
+        # double-calibration artifacts. Reliability alpha mapping handles residual drift.
+        log_info("🎯 Applying reliability mapping for calibration stability...")
 
         # Post-calibration reliability mapping:
         # shrink confidence toward 50/50 to reduce ECE spikes on volatile folds.
-        cal_probs = calibrated_pipeline.predict_proba(X_test)[:, 1]
+        cal_probs = ensemble.predict_proba(X_test)[:, 1]
         reliability_alpha = self._fit_reliability_alpha(y_test.to_numpy(), cal_probs)
         cal_probs_adj = self._apply_reliability_map(cal_probs, reliability_alpha)
         test_acc_cal = accuracy_score(y_test, (cal_probs_adj > 0.5).astype(int))
@@ -342,25 +402,23 @@ class UnifiedNBAPredictionSystem:
         log_info(f"✅ Calibrated Test Accuracy: {test_acc_cal:.1%}")
         log_info(f"   Probability range (mapped): {cal_probs_adj.min():.1%} - {cal_probs_adj.max():.1%}")
         log_info(f"   Reliability alpha: {reliability_alpha:.2f} | ECE {ece_before:.3f} -> {ece_after:.3f}")
-        log_info(f"   🔧 Clipping will limit predictions to 30-70% range")
-        
+
         # Store the model with calibration metadata
         model_results = {
-            'model': calibrated_pipeline,
+            'model': ensemble,
             'feature_names': features,
             'test_accuracy': test_acc_cal,
             'train_accuracy': train_acc,
-            'clip_probs': True,  # Flag to clip probabilities during prediction
             'reliability_alpha': float(reliability_alpha),
         }
-        
+
         return model_results
 
     def _apply_reliability_map(self, p_home, alpha):
         """Shrink probabilities toward 50/50 to improve calibration stability."""
         p_home = np.asarray(p_home, dtype=float)
         mapped = 0.5 + float(alpha) * (p_home - 0.5)
-        return np.clip(mapped, 0.02, 0.98)
+        return np.clip(mapped, 0.05, 0.95)
 
     def _simple_ece(self, y_true, p_home, n_bins=10):
         y_true = np.asarray(y_true, dtype=float)
@@ -391,7 +449,7 @@ class UnifiedNBAPredictionSystem:
         p_home = np.asarray(p_home, dtype=float)
         best_alpha = 1.0
         best_score = float("inf")
-        for alpha in np.linspace(0.20, 0.80, 13):
+        for alpha in np.linspace(0.30, 1.00, 15):
             p_adj = self._apply_reliability_map(p_home, alpha)
             ece = self._simple_ece(y_true, p_adj, n_bins=10)
             score = ece
@@ -400,6 +458,53 @@ class UnifiedNBAPredictionSystem:
                 best_alpha = float(alpha)
         return best_alpha
     
+    def _merge_live_vegas_features(self, upcoming_features):
+        """Overwrite imputed vegas features with live odds for upcoming games."""
+        if self.vegas_odds.empty:
+            return upcoming_features
+
+        from nbautils import normalize_team_name
+
+        for idx, row in upcoming_features.iterrows():
+            home_code = normalize_team_name(str(row.get('home_team', '')))
+            away_code = normalize_team_name(str(row.get('away_team', '')))
+
+            match = self.vegas_odds[
+                ((self.vegas_odds['home_team'] == home_code) & (self.vegas_odds['away_team'] == away_code)) |
+                ((self.vegas_odds['home_team'] == away_code) & (self.vegas_odds['away_team'] == home_code))
+            ]
+            if match.empty:
+                continue
+
+            game_row = match.iloc[0]
+            flipped = (game_row['home_team'] == away_code)
+
+            ml_h = game_row.get('ml_home')
+            ml_a = game_row.get('ml_away')
+            if flipped:
+                ml_h, ml_a = ml_a, ml_h
+
+            def _to_implied(odds):
+                if pd.isna(odds) or odds == 0:
+                    return np.nan
+                odds = float(odds)
+                return abs(odds) / (abs(odds) + 100.0) if odds < 0 else 100.0 / (odds + 100.0)
+
+            imp_h = _to_implied(ml_h)
+            imp_a = _to_implied(ml_a)
+
+            if not np.isnan(imp_h) and not np.isnan(imp_a):
+                upcoming_features.at[idx, 'vegas_implied_home'] = imp_h
+                upcoming_features.at[idx, 'vegas_implied_away'] = imp_a
+                upcoming_features.at[idx, 'vegas_implied_diff'] = imp_h - imp_a
+                upcoming_features.at[idx, 'has_vegas_odds'] = 1.0
+
+            total = game_row.get('total_line')
+            if pd.notna(total):
+                upcoming_features.at[idx, 'vegas_total_line'] = float(total)
+
+        return upcoming_features
+
     def _add_derived_features(self, df):
         """Add derived features to upcoming games"""
         if 'combined_pace' not in df.columns:
@@ -604,8 +709,25 @@ class UnifiedNBAPredictionSystem:
                 )
                 game_evaluations.append(eval_result)
         
-        # Get best bets
-        best_bets = self.betting.get_daily_recommendations(game_evaluations, max_bets)
+        # Get final bets via DecisionAI (centralized "final decision" layer).
+        decision_ai = DecisionAI(self.betting)
+        best_bets = decision_ai.decide(game_evaluations, max_bets=max_bets)
+
+        # Persist prediction + decisions to the warehouse.
+        try:
+            self.warehouse.ingest_predictions_df(
+                self.run_id,
+                preds,
+                model_meta={
+                    "moneyline_test_accuracy": float(model_results.get("test_accuracy", 0.0)),
+                    "reliability_alpha": float(model_results.get("reliability_alpha", 1.0)),
+                    "clip_range": [0.05, 0.95],
+                },
+            )
+            self.warehouse.ingest_decisions(self.run_id, best_bets)
+        except Exception:
+            # Never break the user flow due to analytics persistence.
+            pass
         
         # Show skipped games
         if skipped_no_odds:
@@ -721,13 +843,25 @@ def main():
         default='reports/strict_backtest_latest.json',
         help='Strict backtest report path',
     )
-    
+    parser.add_argument('--tune', action='store_true', help='Run Optuna hyperparameter tuning before training')
+    parser.add_argument('--tune-trials', type=int, default=80, help='Optuna trials per model (default 80)')
+    parser.add_argument('--analyze-features', action='store_true', help='Run feature importance analysis and exit')
+
     args = parser.parse_args()
     
     print("\n" + "="*90)
     print("🏀 UNIFIED NBA PREDICTION SYSTEM V2.0 (CALIBRATED)")
     print("📅 Showing: Today + Tomorrow")
     print("="*90 + "\n")
+
+    if args.analyze_features:
+        from feature_selection import run_feature_analysis
+        print("\n   Running feature importance analysis...")
+        report = run_feature_analysis(
+            days_back=args.days_back,
+            n_splits=args.backtest_splits,
+        )
+        sys.exit(0)
 
     if args.strict_backtest:
         report = run_strict_backtest(
@@ -737,7 +871,24 @@ def main():
         )
         gates_pass = report['acceptance_gates']['all_pass']
         sys.exit(0 if gates_pass else 2)
-    
+
+    if args.tune:
+        from hyperopt import tune_all
+        from data_processor import NBADataProcessor
+        from strict_backtest import CANONICAL_FEATURES
+
+        print("\n⏳ Running Optuna hyperparameter tuning...")
+        processor = NBADataProcessor()
+        df = processor.process_all_data()
+        df = df.dropna(subset=['home_won']).iloc[15:].copy()
+        for f in CANONICAL_FEATURES:
+            if f not in df.columns:
+                df[f] = 0
+        X_tune = df[CANONICAL_FEATURES].copy()
+        y_tune = df['home_won'].astype(int).copy()
+        tune_all(X_tune, y_tune, n_trials=args.tune_trials, force=True)
+        print("✅ Tuning complete. Params cached to models/optuna_best_params.json\n")
+
     system = UnifiedNBAPredictionSystem(bankroll=args.bankroll)
     
     try:

@@ -1,0 +1,70 @@
+name: Evening Odds Snapshot
+
+on:
+  schedule:
+    # 6:30 PM ET = 11:30 PM UTC (during EDT)
+    # Captures line movement closer to tip-off
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Take odds snapshot
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          echo "=== Odds Snapshot - $(date) ==="
+          python -c "
+          from vegas_odds_fetcher import VegasOddsFetcher
+          f = VegasOddsFetcher()
+          odds = f.get_odds_for_today()
+          if odds is not None and not odds.empty:
+              print(f'Captured {len(odds)} games')
+              print(odds[['home_team','away_team','home_ml','away_ml']].to_string())
+          else:
+              print('No odds available')
+          "
+
+      - name: Commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -f data/*.csv 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No new snapshot data"
+          else
+            git commit -m "Odds snapshot $(date +%Y-%m-%d_%H%M)
+
+          Evening snapshot for line movement tracking"
+            git push
+          fi

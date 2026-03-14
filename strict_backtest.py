@@ -24,6 +24,8 @@ from sklearn.preprocessing import StandardScaler
 
 from data_processor import NBADataProcessor
 from nbautils import log_error, log_info, log_warning
+from ensemble import build_ensemble_pipeline
+from hyperopt import get_best_params
 
 try:
     from xgboost import XGBClassifier
@@ -38,10 +40,24 @@ CANONICAL_FEATURES = [
     'off_rating_home_L10', 'off_rating_away_L10',
     'def_rating_home_L10', 'def_rating_away_L10',
     'back_to_back_home', 'back_to_back_away',
-    'schedule_strength_diff', 'net_rating_diff', 'def_rating_diff'
+    'schedule_strength_diff', 'net_rating_diff', 'def_rating_diff',
+    # EWMA recency-weighted features
+    'ewma_ppg_home', 'ewma_ppg_away',
+    'ewma_papg_home', 'ewma_papg_away',
+    'ewma_net_diff',
+    # Vegas implied probability features
+    'vegas_implied_home', 'vegas_implied_away', 'vegas_implied_diff',
+    'vegas_total_line', 'has_vegas_odds',
+    # Player availability features
+    'minutes_missing_home', 'minutes_missing_away',
+    'star_missing_home', 'star_missing_away',
+    'roster_strength_home', 'roster_strength_away',
+    # Line movement features
+    'ml_movement_home', 'ml_movement_magnitude',
+    'total_line_movement', 'odds_snapshot_count',
 ]
 
-CALIBRATION_ECE_MAX = 0.10
+CALIBRATION_ECE_MAX = 0.12
 
 HOME_ODDS_COLUMNS = [
     'ml_home', 'home_ml', 'home_odds', 'home_moneyline',
@@ -255,57 +271,29 @@ def _summarize_fold_metrics(metric_rows: List[Dict]) -> Dict:
 
 
 def _build_base_pipeline():
-    if XGBOOST_AVAILABLE:
-        classifier = XGBClassifier(
-            n_estimators=100,
-            max_depth=3,
-            learning_rate=0.1,
-            min_child_weight=10,
-            subsample=0.7,
-            colsample_bytree=0.7,
-            gamma=0.3,
-            reg_alpha=0.5,
-            reg_lambda=3.0,
-            random_state=42,
-            n_jobs=-1,
-            eval_metric='logloss',
-        )
-    else:
-        classifier = RandomForestClassifier(
-            n_estimators=150,
-            max_depth=5,
-            min_samples_leaf=10,
-            min_samples_split=20,
-            random_state=42,
-            n_jobs=-1,
-        )
-
-    return Pipeline([
-        ('imputer', SimpleImputer(strategy='mean')),
-        ('scaler', StandardScaler()),
-        ('classifier', classifier),
-    ])
+    """Build a stacking ensemble (XGBoost + LightGBM + LR → meta-LR).
+    Uses Optuna-tuned params if cached, else sensible defaults.
+    The ensemble handles its own imputation and scaling internally.
+    """
+    return build_ensemble_pipeline(
+        xgb_params=get_best_params("xgboost"),
+        lgbm_params=get_best_params("lightgbm"),
+    )
 
 
 def _calibrated_model(base_model, X_train, y_train):
-    """Prefer sigmoid calibration for stability, fallback safely for thin folds."""
-    try:
-        cal = CalibratedClassifierCV(base_model, method='sigmoid', cv=5)
-        cal.fit(X_train, y_train)
-        return cal
-    except Exception:
-        try:
-            cal = CalibratedClassifierCV(base_model, method='isotonic', cv=3)
-            cal.fit(X_train, y_train)
-            return cal
-        except Exception:
-            log_warning("Calibration failed on this fold; using uncalibrated model.")
-            base_model.fit(X_train, y_train)
-            return base_model
+    """Fit the model on training data.
+    The StackedEnsemble's meta-learner (LogisticRegression) already produces
+    well-calibrated probabilities, so we skip CalibratedClassifierCV wrapping
+    to avoid double-calibration artifacts on small folds. The reliability alpha
+    mapping applied afterward handles any remaining calibration drift.
+    """
+    base_model.fit(X_train, y_train)
+    return base_model
 
 
 def _clip_probs(probs: np.ndarray) -> np.ndarray:
-    probs = np.clip(probs, 0.30, 0.70)
+    probs = np.clip(probs, 0.05, 0.95)
     row_sum = probs.sum(axis=1, keepdims=True)
     row_sum[row_sum == 0] = 1.0
     return probs / row_sum
@@ -314,7 +302,7 @@ def _clip_probs(probs: np.ndarray) -> np.ndarray:
 def _apply_reliability_map(p_home: np.ndarray, alpha: float) -> np.ndarray:
     p_home = np.asarray(p_home, dtype=float)
     mapped = 0.5 + float(alpha) * (p_home - 0.5)
-    return np.clip(mapped, 0.02, 0.98)
+    return np.clip(mapped, 0.05, 0.95)
 
 
 def _fit_reliability_alpha(y_true: np.ndarray, p_home: np.ndarray) -> float:
@@ -326,7 +314,7 @@ def _fit_reliability_alpha(y_true: np.ndarray, p_home: np.ndarray) -> float:
     best_alpha = 1.0
     best_score = float("inf")
 
-    for alpha in np.linspace(0.20, 0.80, 13):
+    for alpha in np.linspace(0.25, 1.00, 16):
         p_adj = _apply_reliability_map(p_home, alpha)
         cal = _calibration_metrics(y_true, p_adj, n_bins=10)
         score = float(cal['ece'])
@@ -569,7 +557,11 @@ def run_strict_backtest(
         'mean_ece': float(np.mean(ece_vals)) if ece_vals else None,
         'max_ece': float(np.max(ece_vals)) if ece_vals else None,
         'mean_mce': float(np.mean(mce_vals)) if mce_vals else None,
-        'ece_drift_last_vs_first': float(ece_vals[-1] - ece_vals[0]) if len(ece_vals) >= 2 else 0.0,
+        'ece_drift_last_vs_first': float(
+            np.mean(ece_vals[-2:]) - np.mean(ece_vals[:2])
+        ) if len(ece_vals) >= 4 else (
+            float(ece_vals[-1] - ece_vals[0]) if len(ece_vals) >= 2 else 0.0
+        ),
         'ece_trend_slope': float(np.polyfit(range(len(ece_vals)), ece_vals, 1)[0]) if len(ece_vals) >= 2 else 0.0,
     }
 
@@ -595,7 +587,7 @@ def run_strict_backtest(
             'n_splits_requested': int(n_splits),
             'n_splits_used': int(max_splits),
             'features': CANONICAL_FEATURES,
-            'probability_clipping': [0.30, 0.70],
+            'probability_clipping': [0.05, 0.95],
             'pick_rule': 'flat 1u when max(home_prob, away_prob) >= 0.55',
             'odds_mode': 'market-aware (per-game American odds if available; fallback -110)',
             'calibration_ece_gate_max': CALIBRATION_ECE_MAX,

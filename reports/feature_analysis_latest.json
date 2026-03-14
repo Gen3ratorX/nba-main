@@ -1,0 +1,939 @@
+{
+  "generated_at": "2026-03-13T22:33:09.365126",
+  "mode": "feature_analysis",
+  "config": {
+    "days_back": 180,
+    "n_splits": 8,
+    "n_repeats_permutation": 10,
+    "correlation_threshold": 0.8,
+    "features_analyzed": [
+      "home_court_advantage",
+      "form_diff",
+      "elo_diff",
+      "fatigue_index",
+      "rest_diff",
+      "pace_home_L5",
+      "pace_away_L5",
+      "combined_pace",
+      "off_rating_home_L10",
+      "off_rating_away_L10",
+      "def_rating_home_L10",
+      "def_rating_away_L10",
+      "back_to_back_home",
+      "back_to_back_away",
+      "schedule_strength_diff",
+      "net_rating_diff",
+      "def_rating_diff",
+      "ewma_ppg_home",
+      "ewma_ppg_away",
+      "ewma_papg_home",
+      "ewma_papg_away",
+      "ewma_net_diff",
+      "vegas_implied_home",
+      "vegas_implied_away",
+      "vegas_implied_diff",
+      "vegas_total_line",
+      "has_vegas_odds",
+      "minutes_missing_home",
+      "minutes_missing_away",
+      "star_missing_home",
+      "star_missing_away",
+      "roster_strength_home",
+      "roster_strength_away",
+      "ml_movement_home",
+      "ml_movement_magnitude",
+      "total_line_movement",
+      "odds_snapshot_count"
+    ],
+    "shap_available": false
+  },
+  "dataset": {
+    "games_used": 3569,
+    "date_start": "2023-10-24 00:00:00",
+    "date_end": "2026-01-10 00:00:00"
+  },
+  "permutation_importance": {
+    "rankings": [
+      {
+        "rank": 1,
+        "feature": "elo_diff",
+        "mean_importance": 0.08387,
+        "std_importance": 0.033002,
+        "fold_values": [
+          0.065657,
+          0.111111,
+          0.112374,
+          0.098485,
+          0.084596,
+          0.083081,
+          0.094444,
+          0.021212
+        ]
+      },
+      {
+        "rank": 2,
+        "feature": "minutes_missing_home",
+        "mean_importance": 0.01512,
+        "std_importance": 0.041175,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.122222,
+          -0.001263
+        ]
+      },
+      {
+        "rank": 3,
+        "feature": "roster_strength_home",
+        "mean_importance": 0.010417,
+        "std_importance": 0.027432,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.081818,
+          0.001515
+        ]
+      },
+      {
+        "rank": 4,
+        "feature": "ewma_net_diff",
+        "mean_importance": 0.007607,
+        "std_importance": 0.011787,
+        "fold_values": [
+          0.001768,
+          -0.000505,
+          0.015909,
+          0.010101,
+          0.005808,
+          0.000758,
+          0.026263,
+          0.000758
+        ]
+      },
+      {
+        "rank": 5,
+        "feature": "pace_home_L5",
+        "mean_importance": 0.004198,
+        "std_importance": 0.010226,
+        "fold_values": [
+          0.00202,
+          -0.00202,
+          0.021212,
+          0.008333,
+          -0.00303,
+          -0.001515,
+          0.004545,
+          0.00404
+        ]
+      },
+      {
+        "rank": 6,
+        "feature": "pace_away_L5",
+        "mean_importance": 0.00404,
+        "std_importance": 0.008898,
+        "fold_values": [
+          0.004798,
+          -0.002778,
+          0.011111,
+          0.016162,
+          0.003788,
+          0.001263,
+          0.002273,
+          -0.004293
+        ]
+      },
+      {
+        "rank": 7,
+        "feature": "net_rating_diff",
+        "mean_importance": 0.003251,
+        "std_importance": 0.010745,
+        "fold_values": [
+          0.003535,
+          0.002273,
+          0.003788,
+          0.007323,
+          -0.00303,
+          -0.004798,
+          0.020202,
+          -0.003283
+        ]
+      },
+      {
+        "rank": 8,
+        "feature": "off_rating_home_L10",
+        "mean_importance": 0.002809,
+        "std_importance": 0.007064,
+        "fold_values": [
+          0.004798,
+          -0.004293,
+          0.012626,
+          0.008333,
+          -0.000758,
+          0.00101,
+          0.00303,
+          -0.002273
+        ]
+      },
+      {
+        "rank": 9,
+        "feature": "back_to_back_home",
+        "mean_importance": 0.002778,
+        "std_importance": 0.010011,
+        "fold_values": [
+          0.012626,
+          -0.00303,
+          0.008081,
+          0.008333,
+          0.003535,
+          -0.002273,
+          0.006566,
+          -0.011616
+        ]
+      },
+      {
+        "rank": 10,
+        "feature": "form_diff",
+        "mean_importance": 0.002115,
+        "std_importance": 0.011226,
+        "fold_values": [
+          0.00202,
+          -0.008838,
+          0.02197,
+          0.008838,
+          -0.00404,
+          -0.00303,
+          0.003283,
+          -0.003283
+        ]
+      },
+      {
+        "rank": 11,
+        "feature": "rest_diff",
+        "mean_importance": 0.002052,
+        "std_importance": 0.005068,
+        "fold_values": [
+          0.006818,
+          -0.005303,
+          0.005051,
+          0.002778,
+          0.002525,
+          0.005303,
+          -0.000758,
+          0.0
+        ]
+      },
+      {
+        "rank": 12,
+        "feature": "off_rating_away_L10",
+        "mean_importance": 0.001862,
+        "std_importance": 0.008496,
+        "fold_values": [
+          0.000253,
+          -0.00202,
+          0.013384,
+          0.003788,
+          -0.004293,
+          0.002778,
+          0.004293,
+          -0.003283
+        ]
+      },
+      {
+        "rank": 13,
+        "feature": "combined_pace",
+        "mean_importance": 0.001515,
+        "std_importance": 0.004818,
+        "fold_values": [
+          0.005808,
+          -0.005051,
+          0.001515,
+          0.003535,
+          0.00303,
+          -0.001263,
+          0.005556,
+          -0.00101
+        ]
+      },
+      {
+        "rank": 14,
+        "feature": "ewma_ppg_home",
+        "mean_importance": 0.001484,
+        "std_importance": 0.010509,
+        "fold_values": [
+          0.002778,
+          -0.006566,
+          0.016919,
+          0.002525,
+          0.00101,
+          -0.010101,
+          0.007071,
+          -0.001768
+        ]
+      },
+      {
+        "rank": 15,
+        "feature": "ewma_papg_home",
+        "mean_importance": 0.001326,
+        "std_importance": 0.011648,
+        "fold_values": [
+          0.000758,
+          -0.002778,
+          0.003535,
+          0.009848,
+          -0.00202,
+          -0.009343,
+          0.013889,
+          -0.003283
+        ]
+      },
+      {
+        "rank": 16,
+        "feature": "star_missing_away",
+        "mean_importance": 0.001168,
+        "std_importance": 0.004856,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.006313,
+          0.00303
+        ]
+      },
+      {
+        "rank": 17,
+        "feature": "back_to_back_away",
+        "mean_importance": 0.001073,
+        "std_importance": 0.005457,
+        "fold_values": [
+          0.000253,
+          -0.000253,
+          0.000505,
+          0.001263,
+          -0.001263,
+          0.006566,
+          0.001263,
+          0.000253
+        ]
+      },
+      {
+        "rank": 18,
+        "feature": "fatigue_index",
+        "mean_importance": 0.000505,
+        "std_importance": 0.004233,
+        "fold_values": [
+          -0.000253,
+          -0.002525,
+          -0.000758,
+          0.006061,
+          0.004545,
+          -0.000253,
+          0.001263,
+          -0.00404
+        ]
+      },
+      {
+        "rank": 19,
+        "feature": "minutes_missing_away",
+        "mean_importance": 0.000253,
+        "std_importance": 0.004199,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.004293,
+          -0.002273
+        ]
+      },
+      {
+        "rank": 20,
+        "feature": "ewma_papg_away",
+        "mean_importance": 0.000189,
+        "std_importance": 0.006809,
+        "fold_values": [
+          0.003788,
+          -0.007828,
+          0.002525,
+          0.000758,
+          0.003535,
+          -0.005051,
+          0.007576,
+          -0.003788
+        ]
+      },
+      {
+        "rank": 21,
+        "feature": "star_missing_home",
+        "mean_importance": 3.2e-05,
+        "std_importance": 0.001894,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.001515,
+          -0.001263
+        ]
+      },
+      {
+        "rank": 22,
+        "feature": "has_vegas_odds",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 23,
+        "feature": "vegas_total_line",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 24,
+        "feature": "vegas_implied_diff",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 25,
+        "feature": "odds_snapshot_count",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 26,
+        "feature": "vegas_implied_home",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 27,
+        "feature": "total_line_movement",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 28,
+        "feature": "ml_movement_home",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 29,
+        "feature": "vegas_implied_away",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 30,
+        "feature": "ml_movement_magnitude",
+        "mean_importance": 0.0,
+        "std_importance": 0.0,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 31,
+        "feature": "schedule_strength_diff",
+        "mean_importance": -0.000253,
+        "std_importance": 0.007655,
+        "fold_values": [
+          0.008081,
+          -0.011111,
+          0.008586,
+          -0.007828,
+          0.000758,
+          0.00101,
+          0.0,
+          -0.001515
+        ]
+      },
+      {
+        "rank": 32,
+        "feature": "def_rating_diff",
+        "mean_importance": -0.000347,
+        "std_importance": 0.005824,
+        "fold_values": [
+          -0.001768,
+          -0.003283,
+          0.001515,
+          -0.000758,
+          -0.003283,
+          -0.000758,
+          0.004545,
+          0.00101
+        ]
+      },
+      {
+        "rank": 33,
+        "feature": "def_rating_away_L10",
+        "mean_importance": -0.000694,
+        "std_importance": 0.005474,
+        "fold_values": [
+          -0.002778,
+          -0.007071,
+          0.002778,
+          -0.000758,
+          0.002525,
+          -0.002273,
+          0.002778,
+          -0.000758
+        ]
+      },
+      {
+        "rank": 34,
+        "feature": "roster_strength_away",
+        "mean_importance": -0.000726,
+        "std_importance": 0.00527,
+        "fold_values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          -0.000253,
+          -0.005556
+        ]
+      },
+      {
+        "rank": 35,
+        "feature": "def_rating_home_L10",
+        "mean_importance": -0.000852,
+        "std_importance": 0.006499,
+        "fold_values": [
+          -0.0,
+          -0.005556,
+          0.001263,
+          0.004545,
+          -0.003283,
+          -0.003788,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "rank": 36,
+        "feature": "ewma_ppg_away",
+        "mean_importance": -0.001263,
+        "std_importance": 0.008479,
+        "fold_values": [
+          -0.001263,
+          -0.006818,
+          0.012879,
+          -0.002778,
+          0.000505,
+          -0.007576,
+          -0.000758,
+          -0.004293
+        ]
+      },
+      {
+        "rank": 37,
+        "feature": "home_court_advantage",
+        "mean_importance": -0.003693,
+        "std_importance": 0.015193,
+        "fold_values": [
+          -0.012121,
+          -0.010101,
+          0.025,
+          -0.002273,
+          -0.010606,
+          -0.011364,
+          0.004798,
+          -0.012879
+        ]
+      }
+    ],
+    "by_category": {
+      "Home Court & Form": {
+        "sum_importance": 0.084848,
+        "mean_importance": 0.01697,
+        "feature_count": 5
+      },
+      "Pace": {
+        "sum_importance": 0.009754,
+        "mean_importance": 0.003251,
+        "feature_count": 3
+      },
+      "Efficiency Ratings": {
+        "sum_importance": 0.003125,
+        "mean_importance": 0.000781,
+        "feature_count": 4
+      },
+      "Back-to-Back": {
+        "sum_importance": 0.003851,
+        "mean_importance": 0.001926,
+        "feature_count": 2
+      },
+      "Schedule & Ratings": {
+        "sum_importance": 0.002652,
+        "mean_importance": 0.000884,
+        "feature_count": 3
+      },
+      "EWMA": {
+        "sum_importance": 0.009343,
+        "mean_importance": 0.001869,
+        "feature_count": 5
+      },
+      "Vegas": {
+        "sum_importance": 0.0,
+        "mean_importance": 0.0,
+        "feature_count": 5
+      },
+      "Player Impact": {
+        "sum_importance": 0.026263,
+        "mean_importance": 0.004377,
+        "feature_count": 6
+      },
+      "Line Movement": {
+        "sum_importance": 0.0,
+        "mean_importance": 0.0,
+        "feature_count": 4
+      }
+    }
+  },
+  "shap_analysis": null,
+  "correlation_analysis": {
+    "high_correlation_pairs": [
+      {
+        "feature_a": "off_rating_home_L10",
+        "feature_b": "ewma_ppg_home",
+        "pearson": 0.9367,
+        "spearman": 0.9328
+      },
+      {
+        "feature_a": "off_rating_away_L10",
+        "feature_b": "ewma_ppg_away",
+        "pearson": 0.9368,
+        "spearman": 0.9391
+      },
+      {
+        "feature_a": "def_rating_home_L10",
+        "feature_b": "ewma_papg_home",
+        "pearson": 0.939,
+        "spearman": 0.9354
+      },
+      {
+        "feature_a": "def_rating_away_L10",
+        "feature_b": "ewma_papg_away",
+        "pearson": 0.9398,
+        "spearman": 0.938
+      },
+      {
+        "feature_a": "net_rating_diff",
+        "feature_b": "ewma_net_diff",
+        "pearson": 0.9363,
+        "spearman": 0.937
+      },
+      {
+        "feature_a": "minutes_missing_home",
+        "feature_b": "minutes_missing_away",
+        "pearson": 0.8798,
+        "spearman": 0.9278
+      },
+      {
+        "feature_a": "minutes_missing_home",
+        "feature_b": "star_missing_home",
+        "pearson": 0.8167,
+        "spearman": 0.8593
+      },
+      {
+        "feature_a": "minutes_missing_home",
+        "feature_b": "roster_strength_home",
+        "pearson": -0.9883,
+        "spearman": -0.9991
+      },
+      {
+        "feature_a": "minutes_missing_home",
+        "feature_b": "roster_strength_away",
+        "pearson": -0.8795,
+        "spearman": -0.9282
+      },
+      {
+        "feature_a": "minutes_missing_away",
+        "feature_b": "star_missing_away",
+        "pearson": 0.8224,
+        "spearman": 0.8616
+      },
+      {
+        "feature_a": "minutes_missing_away",
+        "feature_b": "roster_strength_home",
+        "pearson": -0.8826,
+        "spearman": -0.9284
+      },
+      {
+        "feature_a": "minutes_missing_away",
+        "feature_b": "roster_strength_away",
+        "pearson": -0.9885,
+        "spearman": -0.999
+      },
+      {
+        "feature_a": "star_missing_home",
+        "feature_b": "roster_strength_home",
+        "pearson": -0.8096,
+        "spearman": -0.8593
+      },
+      {
+        "feature_a": "star_missing_away",
+        "feature_b": "roster_strength_away",
+        "pearson": -0.8179,
+        "spearman": -0.8618
+      },
+      {
+        "feature_a": "roster_strength_home",
+        "feature_b": "roster_strength_away",
+        "pearson": 0.8814,
+        "spearman": 0.9287
+      }
+    ],
+    "correlation_clusters": [
+      [
+        "ewma_ppg_home",
+        "off_rating_home_L10"
+      ],
+      [
+        "ewma_ppg_away",
+        "off_rating_away_L10"
+      ],
+      [
+        "def_rating_home_L10",
+        "ewma_papg_home"
+      ],
+      [
+        "def_rating_away_L10",
+        "ewma_papg_away"
+      ],
+      [
+        "ewma_net_diff",
+        "net_rating_diff"
+      ],
+      [
+        "minutes_missing_away",
+        "minutes_missing_home",
+        "roster_strength_away",
+        "roster_strength_home",
+        "star_missing_away",
+        "star_missing_home"
+      ]
+    ]
+  },
+  "zero_variance_features": [
+    "vegas_implied_home",
+    "vegas_implied_away",
+    "vegas_implied_diff",
+    "vegas_total_line",
+    "has_vegas_odds",
+    "ml_movement_home",
+    "ml_movement_magnitude",
+    "total_line_movement",
+    "odds_snapshot_count"
+  ],
+  "pruning_recommendations": [
+    {
+      "feature": "vegas_implied_home",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "vegas_implied_away",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "vegas_implied_diff",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "vegas_total_line",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "has_vegas_odds",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "ml_movement_home",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "ml_movement_magnitude",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "total_line_movement",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "odds_snapshot_count",
+      "reason": "always_zero",
+      "detail": "Near-zero variance across all training data. No signal available yet.",
+      "confidence": "high"
+    },
+    {
+      "feature": "schedule_strength_diff",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0003. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    },
+    {
+      "feature": "def_rating_diff",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0003. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    },
+    {
+      "feature": "def_rating_away_L10",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0007. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    },
+    {
+      "feature": "roster_strength_away",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0007. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    },
+    {
+      "feature": "def_rating_home_L10",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0009. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    },
+    {
+      "feature": "ewma_ppg_away",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0013. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    },
+    {
+      "feature": "home_court_advantage",
+      "reason": "negative_importance",
+      "detail": "Mean permutation importance = -0.0037. Shuffling this feature improves accuracy.",
+      "confidence": "high"
+    }
+  ],
+  "summary": {
+    "total_features": 37,
+    "zero_variance_count": 9,
+    "negative_importance_count": 7,
+    "high_correlation_pairs_count": 15,
+    "recommended_prune_count": 16
+  }
+}

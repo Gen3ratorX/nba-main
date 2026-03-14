@@ -95,13 +95,58 @@ SITUATIONAL_FEATURES = [
     'h2h_win_rate',
 ]
 
+# EWMA Recency-Weighted Features
+EWMA_FEATURES = [
+    'ewma_ppg_home', 'ewma_ppg_away',
+    'ewma_papg_home', 'ewma_papg_away',
+    'ewma_net_diff',
+]
+
+# Vegas Implied Probability Features
+VEGAS_FEATURES = [
+    'vegas_implied_home', 'vegas_implied_away', 'vegas_implied_diff',
+    'vegas_total_line', 'has_vegas_odds',
+]
+
+# Player Availability Features
+PLAYER_IMPACT_FEATURES = [
+    'minutes_missing_home', 'minutes_missing_away',
+    'star_missing_home', 'star_missing_away',
+    'roster_strength_home', 'roster_strength_away',
+]
+
+# Line Movement Features
+LINE_MOVEMENT_FEATURES = [
+    'ml_movement_home', 'ml_movement_magnitude',
+    'total_line_movement', 'odds_snapshot_count',
+]
+
+# Injury Scraper Configuration
+INJURY_CONFIG = {
+    'espn_url': 'https://www.espn.com/nba/injuries',
+    'cache_ttl_seconds': 7200,          # 2 hours
+    'cache_file': 'data/injury_cache.csv',
+    'status_weights': {
+        'out': 1.0,
+        'doubtful': 0.85,
+        'questionable': 0.25,
+        'day-to-day': 0.50,
+        'probable': 0.10,
+        'suspension': 1.0,
+    },
+}
+
 # Combined Feature List (ALL FEATURES)
 FEATURES = (
-    ELO_FEATURES + 
-    FORM_REST_FEATURES + 
-    HCA_FEATURES + 
-    ADVANCED_METRICS_FEATURES + 
-    SITUATIONAL_FEATURES
+    ELO_FEATURES +
+    FORM_REST_FEATURES +
+    HCA_FEATURES +
+    ADVANCED_METRICS_FEATURES +
+    SITUATIONAL_FEATURES +
+    EWMA_FEATURES +
+    VEGAS_FEATURES +
+    PLAYER_IMPACT_FEATURES +
+    LINE_MOVEMENT_FEATURES
 )
 
 # Legacy support (keep CORE_FEATURES for backwards compatibility)
@@ -156,6 +201,20 @@ LR_CONFIG = {
 CALIBRATION_CONFIG = {
     'method': 'isotonic',       # Better for ensemble models
     'cv': 5
+}
+
+# Stacking Ensemble Configuration
+ENSEMBLE_CONFIG = {
+    'base_learners': ['xgboost', 'lightgbm', 'logistic_regression'],
+    'meta_learner': 'logistic_regression',
+    'cv_folds': 5,              # TimeSeriesSplit folds for OOF predictions
+}
+
+# Optuna Hyperparameter Tuning Configuration
+OPTUNA_CONFIG = {
+    'n_trials': 80,             # Trials per model (XGBoost + LightGBM)
+    'cache_path': 'models/optuna_best_params.json',
+    'objective': 'brier_score',  # Optimize calibrated probabilities, not accuracy
 }
 
 # ============================================================================
@@ -288,6 +347,10 @@ FEATURE_CATEGORIES = {
     'Home Court': HCA_FEATURES,
     'Advanced Metrics': ADVANCED_METRICS_FEATURES,
     'Situational': SITUATIONAL_FEATURES,
+    'EWMA': EWMA_FEATURES,
+    'Vegas': VEGAS_FEATURES,
+    'Player Impact': PLAYER_IMPACT_FEATURES,
+    'Line Movement': LINE_MOVEMENT_FEATURES,
 }
 
 # ============================================================================
