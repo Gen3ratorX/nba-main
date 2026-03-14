@@ -20,45 +20,45 @@ from urllib import request, parse
 import json
 
 
-# Fix truncated team names from the pipeline's fixed-width table columns
-_TEAM_EXPAND = {
-    "Philadel": "76ers", "Philadelp": "76ers", "Philadelphia 76": "76ers",
-    "San Anto": "Spurs", "San Anton": "Spurs", "San Antonio Spu": "Spurs",
-    "Clevelan": "Cavaliers", "Cleveland Caval": "Cavaliers",
-    "Milwauke": "Bucks", "Milwaukee Bucks": "Bucks",
-    "Golden S": "Warriors", "Golden State Wa": "Warriors",
-    "Minnesot": "Timberwolves", "Minnesota Timbe": "Timberwolves",
-    "Oklahoma": "Thunder", "Oklahoma City T": "Thunder",
-    "Charlott": "Hornets", "Charlotte Horne": "Hornets",
-    "Portland": "Trail Blazers", "Portland Trail": "Trail Blazers",
-    "Washingt": "Wizards", "Washington Wiza": "Wizards",
-    "Los Ange": "Lakers", "Los Angeles Lak": "Lakers",
-    "LA Clipp": "Clippers", "LA Clipper": "Clippers",
-    "Sacramen": "Kings", "Sacramento King": "Kings",
-    "Brooklyn": "Nets", "Brooklyn Nets": "Nets",
-    "New York": "Knicks", "New York Knicks": "Knicks",
-    "Indiana": "Pacers", "Indiana Pacers": "Pacers",
-    "Atlanta": "Hawks", "Atlanta Hawks": "Hawks",
-    "Boston C": "Celtics", "Boston Celtics": "Celtics",
-    "Chicago": "Bulls", "Chicago Bulls": "Bulls",
-    "Dallas M": "Mavericks", "Dallas Maverick": "Mavericks",
-    "Denver N": "Nuggets", "Denver Nuggets": "Nuggets",
-    "Detroit": "Pistons", "Detroit Pistons": "Pistons",
-    "Houston": "Rockets", "Houston Rockets": "Rockets",
-    "Memphis": "Grizzlies", "Memphis Grizzli": "Grizzlies",
-    "Miami He": "Heat", "Miami Heat": "Heat",
-    "New Orle": "Pelicans", "New Orleans Pel": "Pelicans",
-    "Orlando": "Magic", "Orlando Magic": "Magic",
-    "Phoenix": "Suns", "Phoenix Suns": "Suns",
-    "Toronto": "Raptors", "Toronto Raptors": "Raptors",
-    "Utah Jaz": "Jazz", "Utah Jazz": "Jazz",
+# Map full/truncated team names → short nicknames for Telegram
+_TEAM_NICKNAMES = {
+    "Atlanta Hawks": "Hawks", "Boston Celtics": "Celtics", "Brooklyn Nets": "Nets",
+    "Charlotte Hornets": "Hornets", "Chicago Bulls": "Bulls",
+    "Cleveland Cavaliers": "Cavaliers", "Dallas Mavericks": "Mavericks",
+    "Denver Nuggets": "Nuggets", "Detroit Pistons": "Pistons",
+    "Golden State Warriors": "Warriors", "Houston Rockets": "Rockets",
+    "Indiana Pacers": "Pacers", "LA Clippers": "Clippers",
+    "Los Angeles Lakers": "Lakers", "Memphis Grizzlies": "Grizzlies",
+    "Miami Heat": "Heat", "Milwaukee Bucks": "Bucks",
+    "Minnesota Timberwolves": "Timberwolves", "New Orleans Pelicans": "Pelicans",
+    "New York Knicks": "Knicks", "Oklahoma City Thunder": "Thunder",
+    "Orlando Magic": "Magic", "Philadelphia 76ers": "76ers",
+    "Phoenix Suns": "Suns", "Portland Trail Blazers": "Trail Blazers",
+    "Sacramento Kings": "Kings", "San Antonio Spurs": "Spurs",
+    "Toronto Raptors": "Raptors", "Utah Jazz": "Jazz",
+    "Washington Wizards": "Wizards",
 }
+# Also handle old truncated names (backwards compat with cached logs)
+_TEAM_NICKNAMES.update({
+    "Philadel": "76ers", "Philadelphia 76": "76ers",
+    "San Anto": "Spurs", "San Antonio Spu": "Spurs",
+    "Clevelan": "Cavaliers", "Cleveland Caval": "Cavaliers",
+    "Milwauke": "Bucks", "Golden State Wa": "Warriors",
+    "Minnesota Timbe": "Timberwolves", "Oklahoma City T": "Thunder",
+    "Charlotte Horne": "Hornets", "Portland Trail": "Trail Blazers",
+    "Washington Wiza": "Wizards", "Los Angeles Lak": "Lakers",
+    "LA Clipp": "Clippers", "Sacramento King": "Kings",
+    "Boston C": "Celtics", "Dallas Maverick": "Mavericks",
+    "Denver N": "Nuggets", "Miami He": "Heat",
+    "Memphis Grizzli": "Grizzlies", "New Orleans Pel": "Pelicans",
+    "Los Ange": "Lakers",
+})
 
 
 def _expand_team(name: str) -> str:
-    """Expand a truncated team name to its short nickname."""
+    """Convert full or truncated team name to short nickname."""
     name = name.strip()
-    return _TEAM_EXPAND.get(name, name)
+    return _TEAM_NICKNAMES.get(name, name)
 
 
 def _find_latest_log() -> Path | None:

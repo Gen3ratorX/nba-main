@@ -778,19 +778,19 @@ class UnifiedNBAPredictionSystem:
         print("\n" + "="*100)
         print("📋 FULL SLATE (ALL GAMES)")
         print("="*100)
-        print(f"{'DATE':<12} | {'HOME':<15} | {'AWAY':<15} | {'ML PICK':<8} | {'WIN%':<6} | {'PRED':<6} | {'VEGAS':<6} | {'TIER'}")
-        print("─" * 100)
-        
+        print(f"{'DATE':<12} | {'HOME':<22} | {'AWAY':<22} | {'ML PICK':<22} | {'WIN%':<6} | {'PRED':<6} | {'VEGAS':<6} | {'TIER'}")
+        print("─" * 130)
+
         for _, row in preds.iterrows():
             date_str = pd.to_datetime(row['game_date']).strftime('%Y-%m-%d')
-            
+
             if row['predicted_home_win']:
-                pick = get_team_name(row['home_team'])[:8]
+                pick = get_team_name(row['home_team'])
                 prob = row['home_win_probability']
             else:
-                pick = get_team_name(row['away_team'])[:8]
+                pick = get_team_name(row['away_team'])
                 prob = row['away_win_probability']
-            
+
             totals = row['totals_pred']
             if totals:
                 total_str = f"{totals['predicted_total']:.1f}"
@@ -798,17 +798,17 @@ class UnifiedNBAPredictionSystem:
             else:
                 total_str = "N/A"
                 tier = "N/A"
-            
+
             # Get Vegas line
             vegas_total = self._get_vegas_total(row['home_team'], row['away_team'])
             vegas_str = f"{vegas_total:.1f}" if vegas_total else "N/A"
+
+            home = get_team_name(row['home_team'])
+            away = get_team_name(row['away_team'])
             
-            home = get_team_name(row['home_team'])[:15]
-            away = get_team_name(row['away_team'])[:15]
-            
-            print(f"{date_str:<12} | {home:<15} | {away:<15} | {pick:<8} | {prob:.0%} | {total_str:<6} | {vegas_str:<6} | {tier}")
-        
-        print("─" * 100 + "\n")
+            print(f"{date_str:<12} | {home:<22} | {away:<22} | {pick:<22} | {prob:.0%} | {total_str:<6} | {vegas_str:<6} | {tier}")
+
+        print("─" * 130 + "\n")
 
 
 def main():
