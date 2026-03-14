@@ -486,8 +486,8 @@ class VegasOddsFetcher:
             time_str = game['game_time'].strftime('%I:%M %p')
             matchup = f"{game['away_team']} @ {game['home_team']}"
             
-            ml = f"{game['ml_away']:+d} / {game['ml_home']:+d}"
-            spread = f"{game['spread_home']:+.1f} ({game['spread_home_odds']:+d})" if game['spread_home'] else "N/A"
+            ml = f"{int(game['ml_away']):+d} / {int(game['ml_home']):+d}" if pd.notna(game.get('ml_away')) and pd.notna(game.get('ml_home')) else "N/A"
+            spread = f"{game['spread_home']:+.1f} ({int(game['spread_home_odds']):+d})" if pd.notna(game.get('spread_home')) and game['spread_home'] else "N/A"
             total = f"{game['total_line']:.1f}" if game['total_line'] else "N/A"
             
             print(f"{time_str:<8} | {matchup:<35} | {ml:<15} | {spread:<15} | {total}")

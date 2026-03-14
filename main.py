@@ -71,8 +71,8 @@ class UnifiedNBAPredictionSystem:
         self.betting = UnifiedBettingSystem(bankroll=bankroll)
         
         # Override with stricter settings
-        self.betting.min_edge_ml = 0.10      # 10% for ML (strict!)
-        self.betting.min_edge_totals = 0.06  # 6% for totals
+        self.betting.min_edge_ml = 0.05      # 5% for ML (relaxed to build tracking history)
+        self.betting.min_edge_totals = 0.04  # 4% for totals
         self.betting.max_bets_per_day = 3
         
         # Initialize Performance Tracker
@@ -89,7 +89,7 @@ class UnifiedNBAPredictionSystem:
         self.run_id = None
         
         log_info(f"Unified NBA System initialized (Bankroll: ${bankroll:,.2f})")
-        log_info(f"Settings: ML edge ≥10%, Totals edge ≥6%, Max 3 bets/day")
+        log_info(f"Settings: ML edge ≥{self.betting.min_edge_ml*100:.0f}%, Totals edge ≥{self.betting.min_edge_totals*100:.0f}%, Max {self.betting.max_bets_per_day} bets/day")
         log_info(f"Mode: Vegas odds validation enabled")
         log_info(f"User timezone: {self.user_tz.key} | NBA timezone: {self.nba_tz.key}")
 
