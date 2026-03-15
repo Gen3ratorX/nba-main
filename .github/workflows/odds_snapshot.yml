@@ -48,7 +48,7 @@ jobs:
           odds = f.get_odds_for_today()
           if odds is not None and not odds.empty:
               print(f'Captured {len(odds)} games')
-              print(odds[['home_team','away_team','home_ml','away_ml']].to_string())
+              print(odds[['home_team','away_team','ml_home','ml_away']].to_string())
           else:
               print('No odds available')
           "
