@@ -24,39 +24,45 @@ from nbautils import log_info, log_error
 
 class NBATotalsModel:
     def __init__(self):
-        # Model 1: The Sniper (Median / 50th Percentile) - More conservative
+        # Model 1: The Sniper (Median / 50th Percentile)
         self.model_main = HistGradientBoostingRegressor(
             loss='absolute_error',
-            learning_rate=0.04,
-            max_iter=500,
-            max_depth=8,
-            l2_regularization=5.0,
+            learning_rate=0.03,
+            max_iter=800,
+            max_depth=6,
+            min_samples_leaf=15,
+            l2_regularization=3.0,
+            max_features=0.8,
             early_stopping=True,
             validation_fraction=0.15,
-            n_iter_no_change=20,
+            n_iter_no_change=25,
             random_state=42
         )
-        
+
         # Model 2: The Floor (10th Percentile)
         self.model_lower = HistGradientBoostingRegressor(
             loss='quantile',
             quantile=0.10,
-            learning_rate=0.04,
-            max_iter=500,
-            max_depth=8,
-            l2_regularization=5.0,
+            learning_rate=0.03,
+            max_iter=800,
+            max_depth=6,
+            min_samples_leaf=15,
+            l2_regularization=3.0,
+            max_features=0.8,
             early_stopping=True,
             random_state=42
         )
-        
+
         # Model 3: The Ceiling (90th Percentile)
         self.model_upper = HistGradientBoostingRegressor(
             loss='quantile',
             quantile=0.90,
-            learning_rate=0.04,
-            max_iter=500,
-            max_depth=8,
-            l2_regularization=5.0,
+            learning_rate=0.03,
+            max_iter=800,
+            max_depth=6,
+            min_samples_leaf=15,
+            l2_regularization=3.0,
+            max_features=0.8,
             early_stopping=True,
             random_state=42
         )
@@ -69,19 +75,39 @@ class NBATotalsModel:
         
         # Define the exact feature set we want
         self.feature_cols = [
+            # Pace (3)
             'pace_home_L5', 'pace_away_L5', 'pace_interaction',
+            # Offensive/Defensive ratings (4)
             'off_rating_home_L10', 'off_rating_away_L10',
             'def_rating_home_L10', 'def_rating_away_L10',
-            'def_rating_diff',
-            'net_rating_diff',
-            'schedule_strength_diff',
+            # Rating differentials (2)
+            'def_rating_diff', 'net_rating_diff',
+            # Scoring averages (6)
             'home_ppg_L10', 'away_ppg_L10',
             'home_papg_L10', 'away_papg_L10',
             'home_home_ppg_L10', 'away_away_ppg_L10',
+            # Composites (2)
             'combined_ppg', 'defensive_total',
+            # Volatility & momentum (6)
             'home_volatility', 'away_volatility', 'matchup_volatility',
             'home_momentum', 'away_momentum', 'total_momentum',
-            'elo_diff', 'fatigue_index', 'home_court_advantage'
+            # Core context (3)
+            'elo_diff', 'fatigue_index', 'home_court_advantage',
+            # === NEW: Previously computed but unused ===
+            # EWMA recency-weighted scoring (7) — weights recent games heavier
+            'ewma_ppg_home', 'ewma_ppg_away',
+            'ewma_papg_home', 'ewma_papg_away',
+            'ewma_net_home', 'ewma_net_away', 'ewma_net_diff',
+            # Rest & fatigue (4) — back-to-backs crush totals
+            'rest_home', 'rest_away', 'rest_diff',
+            'back_to_back_home', 'back_to_back_away',
+            # Schedule strength (1)
+            'schedule_strength_diff',
+            # Head-to-head matchup (2) — some pairings are consistently high/low
+            'h2h_win_rate', 'h2h_games_played',
+            # Player availability (4) — star injuries swing totals 10-20 pts
+            'minutes_missing_home', 'minutes_missing_away',
+            'star_missing_home', 'star_missing_away',
         ]
 
     def analyze_bias(self, y_true, y_pred, phase="Training"):

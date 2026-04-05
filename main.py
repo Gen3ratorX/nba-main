@@ -678,7 +678,7 @@ class UnifiedNBAPredictionSystem:
                     total_uncertainty=totals_pred['uncertainty'],
                     total_lower=totals_pred['lower'],
                     total_upper=totals_pred['upper'],
-                    totals_mae=7.74,
+                    totals_mae=totals_model.get('mae', 15.5) if totals_model else 15.5,
                     total_odds=-110,
                     
                     # Game info
