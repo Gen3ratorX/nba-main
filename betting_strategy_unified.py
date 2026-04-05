@@ -74,7 +74,7 @@ class UnifiedBettingSystem:
         
         # Apply model calibration discount
         adjusted_prob = win_probability * self.ml_uncertainty_discount
-        adjusted_prob = max(0.52, min(0.85, adjusted_prob))  # Clamp to realistic range
+        adjusted_prob = max(0.52, min(0.70, adjusted_prob))  # Cap at 70% — model is 66.8% accurate
         
         # Convert odds to decimal
         if odds < 0:
@@ -84,12 +84,10 @@ class UnifiedBettingSystem:
             decimal_odds = 1 + (odds / 100)
             implied_prob = 100 / (odds + 100)
         
-        # Calculate TRUE edge (accounting for vig)
-        if odds == -110:
-            true_breakeven = 0.5238  # Standard vig
-        else:
-            true_breakeven = implied_prob + 0.025  # Add typical vig
-        
+        # Calculate edge against the raw implied probability (vig included)
+        # This is conservative: we need to beat the line INCLUDING the vig
+        true_breakeven = implied_prob
+
         edge = adjusted_prob - true_breakeven
         
         # Minimum edge filter
@@ -144,7 +142,7 @@ class UnifiedBettingSystem:
         uncertainty: float,
         pred_lower: float,
         pred_upper: float,
-        totals_mae: float = 7.74,  # From your 40-day backtest
+        totals_mae: float = 15.5,  # From latest CV (avg MAE across folds)
         odds: int = -110,
         game_info: Optional[Dict] = None
     ) -> Optional[Dict]:
@@ -172,20 +170,20 @@ class UnifiedBettingSystem:
         diff = abs(predicted_total - vegas_line)
         
         # SANITY CHECK: Skip if model disagrees too much with Vegas
-        # If difference is > 10 points, model is likely miscalibrated
         # Professional bettors rarely find edges > 5-6 points
-        if diff > 10.0:
+        # If we're off by more than half the MAE, we're guessing
+        if diff > 8.0:
             return None  # Model prediction too far from market consensus
         
-        # Tier-based minimum differences (from your V4 model)
+        # Tier-based minimum differences — must exceed model error to have real signal
         if uncertainty < 25:  # Diamond tier
-            min_diff = 2.0
+            min_diff = 5.0
             confidence = 'High'
         elif uncertainty < 35:  # Gold tier
-            min_diff = 4.0
+            min_diff = 7.0
             confidence = 'Medium'
         else:  # 35-40 range
-            min_diff = 6.0
+            min_diff = 9.0
             confidence = 'Low'
         
         # Filter by minimum difference
@@ -199,19 +197,22 @@ class UnifiedBettingSystem:
             direction = 'UNDER'
         
         # Estimate win probability using normal distribution
-        # Your model has 81.6% range accuracy - use this
-        std_dev = uncertainty / (2 * 1.28)  # 80% interval ≈ 1.28 std devs each side
-        
+        # Use the LARGER of model's self-reported uncertainty OR empirical MAE
+        # This prevents the model from overestimating its own precision
+        model_std = uncertainty / (2 * 1.28)  # 80% interval ≈ 1.28 std devs each side
+        empirical_std = totals_mae * 1.25  # MAE → std dev (assuming ~normal errors)
+        std_dev = max(model_std, empirical_std)
+
         # Z-score for how far Vegas is from prediction
         z_score = diff / std_dev
-        
+
         # Convert to win probability (using cumulative normal distribution)
         from scipy.stats import norm
         win_prob = norm.cdf(z_score)
-        
-        # Clamp to reasonable range
-        win_prob = max(0.55, min(0.85, win_prob))
-        
+
+        # Clamp to reasonable range — lower floor to avoid fake edges
+        win_prob = max(0.50, min(0.75, win_prob))
+
         # Convert odds
         if odds < 0:
             decimal_odds = 1 + (100 / abs(odds))
@@ -219,10 +220,10 @@ class UnifiedBettingSystem:
         else:
             decimal_odds = 1 + (odds / 100)
             implied_prob = 100 / (odds + 100)
-        
-        # True breakeven
-        true_breakeven = 0.5238 if odds == -110 else (implied_prob + 0.025)
-        
+
+        # True breakeven — use implied prob with vig still in (conservative)
+        true_breakeven = implied_prob
+
         # Calculate edge
         edge = win_prob - true_breakeven
         
