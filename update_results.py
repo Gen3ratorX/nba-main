@@ -125,35 +125,43 @@ class ResultsUpdater:
                 
                 if not match.empty:
                     game = match.iloc[0]
-                    
+                    home_score = int(game['home_score'])
+                    away_score = int(game['away_score'])
+
                     # Determine actual winner from the game result
-                    if game['home_score'] > game['away_score']:
+                    if home_score > away_score:
                         actual_winner_raw = game['home_team']
                     else:
                         actual_winner_raw = game['away_team']
-                    
-                    # --- CRITICAL FIX: Normalize names before comparing winner ---
-                    norm_predicted = normalize_team_name(pred['predicted_winner'])
-                    norm_actual = normalize_team_name(actual_winner_raw)
-                    
-                    is_win = norm_predicted == norm_actual
-                    # -------------------------------------------------------------
-                    
+
                     # Update tracker
                     self.tracker.record_result(
                         prediction_id=pred['prediction_id'],
                         actual_winner=actual_winner_raw,
-                        home_score=int(game['home_score']),
-                        away_score=int(game['away_score'])
+                        home_score=home_score,
+                        away_score=away_score
                     )
-                    
-                    # Show result
+
+                    # Determine if correct based on bet type
+                    bet_type = pred.get('bet_type', 'moneyline')
+                    if bet_type == 'totals':
+                        actual_total = home_score + away_score
+                        direction = pred.get('direction', 'OVER')
+                        vegas_line = pred.get('vegas_line', 0)
+                        is_win = (actual_total > vegas_line) if direction == 'OVER' else (actual_total < vegas_line)
+                        result_detail = f"{direction} {vegas_line} (actual: {actual_total})"
+                    else:
+                        norm_predicted = normalize_team_name(pred['predicted_winner'])
+                        norm_actual = normalize_team_name(actual_winner_raw)
+                        is_win = norm_predicted == norm_actual
+                        result_detail = f"Pick: {pred['predicted_winner']}"
+
                     result_emoji = "✅" if is_win else "❌"
                     outcome_str = "WIN" if is_win else "LOSS"
-                    
+
                     print(f"{result_emoji} {pred['home_team']} vs {pred['away_team']}: "
-                          f"{int(game['home_score'])}-{int(game['away_score'])} "
-                          f"({outcome_str})")
+                          f"{home_score}-{away_score} "
+                          f"({outcome_str} — {result_detail})")
                     
                     stats['updated'] += 1
                 else:

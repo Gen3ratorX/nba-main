@@ -34,16 +34,26 @@ class PerformanceTracker:
         edge: float,
         bet_amount: Optional[float] = None,
         odds: int = -110,
-        game_id: Optional[str] = None
+        game_id: Optional[str] = None,
+        bet_type: str = 'moneyline',
+        direction: Optional[str] = None,
+        predicted_total: Optional[float] = None,
+        vegas_line: Optional[float] = None
     ) -> str:
         """
-        Record a prediction for a future game
-        
+        Record a prediction for a future game (moneyline or totals)
+
         Returns:
             prediction_id for later result recording
         """
-        prediction_id = f"{game_date}_{home_team}_{away_team}".replace(' ', '_')
-        
+        suffix = f"_{bet_type}" if bet_type != 'moneyline' else ""
+        prediction_id = f"{game_date}_{home_team}_{away_team}{suffix}".replace(' ', '_')
+
+        # Skip duplicates
+        for p in self.predictions:
+            if p['prediction_id'] == prediction_id:
+                return prediction_id
+
         prediction = {
             'prediction_id': prediction_id,
             'game_id': game_id,
@@ -51,21 +61,26 @@ class PerformanceTracker:
             'game_date': game_date,
             'home_team': home_team,
             'away_team': away_team,
+            'bet_type': bet_type,
             'predicted_winner': predicted_winner,
             'win_probability': win_probability,
             'confidence_level': confidence_level,
             'edge': edge,
             'bet_amount': bet_amount,
             'odds': odds,
+            'direction': direction,
+            'predicted_total': predicted_total,
+            'vegas_line': vegas_line,
             'actual_winner': None,
+            'actual_total': None,
             'correct': None,
             'profit': None,
             'result_recorded': False
         }
-        
+
         self.predictions.append(prediction)
         self.save_history()
-        
+
         return prediction_id
     
     def record_result(
@@ -93,13 +108,23 @@ class PerformanceTracker:
         
         # Record result
         pred['actual_winner'] = actual_winner
-        pred['correct'] = (pred['predicted_winner'] == actual_winner)
         pred['result_recorded'] = True
         pred['result_timestamp'] = now_in_tz(self.user_tz).isoformat()
-        
+
         if home_score is not None:
             pred['home_score'] = home_score
             pred['away_score'] = away_score
+
+        # Determine correctness based on bet type
+        if pred.get('bet_type', 'moneyline') == 'totals' and home_score is not None and away_score is not None:
+            actual_total = home_score + away_score
+            pred['actual_total'] = actual_total
+            if pred.get('direction') == 'OVER':
+                pred['correct'] = actual_total > pred['vegas_line']
+            else:
+                pred['correct'] = actual_total < pred['vegas_line']
+        else:
+            pred['correct'] = (pred['predicted_winner'] == actual_winner)
         
         # Calculate profit if bet was placed
         if pred['bet_amount']:

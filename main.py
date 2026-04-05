@@ -733,6 +733,37 @@ class UnifiedNBAPredictionSystem:
             print("   Model predictions disagree strongly with Vegas odds.")
             print("="*90)
         
+        # Record predictions for tracking
+        for bet in best_bets:
+            game = bet['game_info']
+            if bet['bet_type'] == 'moneyline':
+                self.tracker.record_prediction(
+                    game_date=game['date'],
+                    home_team=game['home'],
+                    away_team=game['away'],
+                    predicted_winner=game['ml_pick'],
+                    win_probability=bet['win_probability'] / 100,
+                    confidence_level=bet.get('confidence', 'Medium'),
+                    edge=bet['edge'],
+                    bet_amount=bet['bet_amount'],
+                    bet_type='moneyline'
+                )
+            else:  # total
+                self.tracker.record_prediction(
+                    game_date=game['date'],
+                    home_team=game['home'],
+                    away_team=game['away'],
+                    predicted_winner=game['home'],  # placeholder for totals
+                    win_probability=bet.get('win_probability', 50) / 100,
+                    confidence_level=game.get('totals_tier', 'Medium'),
+                    edge=bet['edge'],
+                    bet_amount=bet['bet_amount'],
+                    bet_type='totals',
+                    direction=bet['direction'],
+                    predicted_total=bet['predicted_total'],
+                    vegas_line=bet['vegas_line']
+                )
+
         if best_bets:
             print("\n" + "="*90)
             print("💎 TOP RECOMMENDATIONS")
