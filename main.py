@@ -70,9 +70,9 @@ class UnifiedNBAPredictionSystem:
         bankroll = bankroll or KELLY_CONFIG['default_bankroll']
         self.betting = UnifiedBettingSystem(bankroll=bankroll)
         
-        # Edge thresholds — conservative, edges are measured against vig-included lines
-        self.betting.min_edge_ml = 0.08      # 8% for ML (must clearly beat the vig)
-        self.betting.min_edge_totals = 0.06  # 6% for totals (honest edge, MAE-adjusted)
+        # Edge thresholds — edges are now honest (MAE-adjusted, vig-included baseline)
+        self.betting.min_edge_ml = 0.06      # 6% for ML
+        self.betting.min_edge_totals = 0.03  # 3% for totals (honest edges are smaller)
         self.betting.max_bets_per_day = 2    # Max 2 bets — quality over quantity
         
         # Initialize Performance Tracker

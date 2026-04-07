@@ -170,20 +170,18 @@ class UnifiedBettingSystem:
         diff = abs(predicted_total - vegas_line)
         
         # SANITY CHECK: Skip if model disagrees too much with Vegas
-        # Professional bettors rarely find edges > 5-6 points
-        # If we're off by more than half the MAE, we're guessing
-        if diff > 8.0:
+        if diff > 12.0:
             return None  # Model prediction too far from market consensus
-        
-        # Tier-based minimum differences — must exceed model error to have real signal
+
+        # Tier-based minimum differences
         if uncertainty < 25:  # Diamond tier
-            min_diff = 5.0
+            min_diff = 3.0
             confidence = 'High'
         elif uncertainty < 35:  # Gold tier
-            min_diff = 7.0
+            min_diff = 5.0
             confidence = 'Medium'
         else:  # 35-40 range
-            min_diff = 9.0
+            min_diff = 7.0
             confidence = 'Low'
         
         # Filter by minimum difference
