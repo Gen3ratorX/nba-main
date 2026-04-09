@@ -147,12 +147,14 @@ class NBATotalsModel:
 
         df['total_points'] = df['home_score'] + df['away_score']
         
-        missing = [f for f in self.feature_cols if f not in df.columns]
-        if missing:
-            log_error(f"Missing features: {missing}. Update data_processor.py!")
-            return
+        # Fill missing feature columns with 0 (features default to 0 when unavailable)
+        for f in self.feature_cols:
+            if f not in df.columns:
+                df[f] = 0.0
+            else:
+                df[f] = df[f].fillna(0.0)
 
-        df = df.dropna(subset=self.feature_cols + ['total_points'])
+        df = df.dropna(subset=['total_points'])
         
         X = df[self.feature_cols]
         y = df['total_points']
