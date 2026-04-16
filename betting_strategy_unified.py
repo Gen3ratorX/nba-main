@@ -30,8 +30,8 @@ class UnifiedBettingSystem:
         self.min_bet_amount = 5.0
         
         # Minimum edges (strict)
-        self.min_edge_ml = 0.10      # 10% for moneylines (strict!)
-        self.min_edge_totals = 0.06  # 6% for totals (slightly easier)
+        self.min_edge_ml = 0.05      # 5% for moneylines
+        self.min_edge_totals = 0.03  # 3% for totals
         
         # Model calibration (adjust based on your backtest results)
         # CRITICAL: Your ML model showed 25% accuracy on Feb 8 vs 75% test accuracy
@@ -68,9 +68,11 @@ class UnifiedBettingSystem:
         Returns:
             Dict with bet recommendation or None
         """
-        # Filter by confidence first
+        # Keep Low confidence plays available, but make them much smaller.
         if confidence == 'Low':
-            return None
+            kelly_confidence_multiplier = 0.35
+        else:
+            kelly_confidence_multiplier = 1.0
         
         # Apply model calibration discount
         adjusted_prob = win_probability * self.ml_uncertainty_discount
@@ -101,8 +103,12 @@ class UnifiedBettingSystem:
         # Apply fractional Kelly + confidence multiplier
         if confidence == 'High':
             kelly_multiplier = self.kelly_fraction
-        else:  # Medium
+        elif confidence == 'Medium':
             kelly_multiplier = self.kelly_fraction * 0.6
+        else:
+            kelly_multiplier = self.kelly_fraction * 0.35
+
+        kelly_multiplier *= kelly_confidence_multiplier
         
         bet_fraction = kelly_pct * kelly_multiplier
         bet_fraction = max(0, min(bet_fraction, self.max_bet_pct))

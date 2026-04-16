@@ -71,9 +71,9 @@ class UnifiedNBAPredictionSystem:
         self.betting = UnifiedBettingSystem(bankroll=bankroll)
         
         # Edge thresholds — edges are now honest (MAE-adjusted, vig-included baseline)
-        self.betting.min_edge_ml = 0.06      # 6% for ML
-        self.betting.min_edge_totals = 0.03  # 3% for totals (honest edges are smaller)
-        self.betting.max_bets_per_day = 2    # Max 2 bets — quality over quantity
+        self.betting.min_edge_ml = 0.04      # 4% for ML
+        self.betting.min_edge_totals = 0.02  # 2% for totals (still conservative)
+        self.betting.max_bets_per_day = 3    # Allow a fuller slate without getting noisy
         
         # Initialize Performance Tracker
         self.tracker = PerformanceTracker(filepath='data/prediction_history.json')
@@ -649,19 +649,19 @@ class UnifiedNBAPredictionSystem:
                 else:
                     vegas_implied = 100 / (ml_odds + 100)
                 
-                # Check 1: Model says 65%+ but Vegas says underdog = likely wrong
-                if ml_prob > 0.65 and is_underdog:
+                # Check 1: Model says strongly favored but Vegas says underdog = likely wrong
+                if ml_prob > 0.72 and is_underdog:
                     skipped_calibration.append(f"{row['away_team']} @ {row['home_team']}")
                     continue
-                
-                # Check 2: Model disagrees with Vegas by >20 percentage points = likely wrong
+
+                # Check 2: Model disagrees with Vegas by >25 percentage points = likely wrong
                 prob_diff = abs(ml_prob - vegas_implied)
-                if prob_diff > 0.20:  # 20 percentage points
+                if prob_diff > 0.25:  # 25 percentage points
                     skipped_calibration.append(f"{row['away_team']} @ {row['home_team']}")
                     continue
-                
-                # Check 3: Model says <35% but Vegas says heavy favorite = likely wrong  
-                if ml_prob < 0.35 and ml_odds < -200:
+
+                # Check 3: Model says very unlikely but Vegas says heavy favorite = likely wrong
+                if ml_prob < 0.30 and ml_odds < -250:
                     skipped_calibration.append(f"{row['away_team']} @ {row['home_team']}")
                     continue
                 

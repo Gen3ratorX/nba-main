@@ -81,6 +81,7 @@ def _parse_picks(log_text: str) -> dict:
 
     # Parse top recommendations
     in_top = False
+    in_full_slate = False
     current_bet = {}
     for line in log_text.splitlines():
         stripped = line.strip()
@@ -100,6 +101,11 @@ def _parse_picks(log_text: str) -> dict:
         # Top recommendations section
         if "TOP RECOMMENDATIONS" in line:
             in_top = True
+            in_full_slate = False
+            continue
+        if "FULL SLATE (ALL GAMES)" in line or "FULL SLATE (" in line:
+            in_top = False
+            in_full_slate = True
             continue
         if in_top and line.startswith("#") or (in_top and re.match(r"\s*#\d+", line)):
             if current_bet:
@@ -157,7 +163,7 @@ def _parse_picks(log_text: str) -> dict:
                 in_top = False
 
         # Parse full slate table
-        if re.match(r"\d{4}-\d{2}-\d{2}\s+\|", stripped):
+        if in_full_slate and re.match(r"\d{4}-\d{2}-\d{2}\s+\|", stripped):
             parts = [p.strip() for p in stripped.split("|")]
             if len(parts) >= 7:
                 result["full_slate"].append({
@@ -179,7 +185,7 @@ def _format_telegram_message(picks: dict) -> str:
     if picks["no_bets"]:
         lines.append("🚫 No qualifying bets today.")
         lines.append("_All games failed minimum edge requirements._")
-        lines.append("_This means the system is being selective — good._")
+        lines.append("_This means the system is being selective._")
     elif picks["top_bets"]:
         lines.append(f"💎 *TOP {len(picks['top_bets'])} BETS:*\n")
         for i, bet in enumerate(picks["top_bets"], 1):
@@ -204,11 +210,16 @@ def _format_telegram_message(picks: dict) -> str:
 
     # Full slate summary
     if picks["full_slate"]:
+        if picks["no_bets"]:
+            lines.append("")
         lines.append(f"📋 *FULL SLATE ({len(picks['full_slate'])} games):*")
         for game in picks["full_slate"]:
             prob = game["prob"].replace("%", "")
             lines.append(f"  {game['away']} @ {game['home']} → {game['pick']} ({game['prob']})")
         lines.append("")
+    elif picks["no_bets"]:
+        lines.append("")
+        lines.append("📋 *FULL SLATE:* no games were parsed from the log.")
 
     if picks["skipped_no_odds"]:
         lines.append(f"⚠️ {picks['skipped_no_odds']} games skipped (no odds)")
